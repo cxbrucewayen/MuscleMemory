@@ -1,0 +1,56 @@
+# Simulated DemoChat 4.1 on Windows (English UI). See src/musclememory/drivers/sim.py.
+platform: WIN
+os_version: 10.0.22631
+lang: en-US
+display: DPI 100%
+driver_version: 0.1.0
+foreground: demochat.exe
+apps:
+  demochat.exe:
+    version: 4.1.0
+    on_open: {screen: chats}
+    state:
+      screen: chats
+      query: ""
+      profile: closed
+      profile_contact: ""
+      remark: Old remark
+      draft: ""
+      editing: "no"
+      chat_query: ""
+      chat: ""
+      attaching: "no"
+      attach: ""
+      sent: ""
+      sent_to: ""
+    nodes:
+      - {key: main, role: Window, id: main_window, name: DemoChat}
+      - {key: nav_chats, parent: main, role: Button, id: nav_chats, name: Chats, click: {screen: chats}}
+      - {key: nav_contacts, parent: main, role: Button, id: nav_contacts, name: Contacts, click: {screen: contacts}}
+      - {key: chats_page, parent: main, role: Pane, id: chats_page, show_if: {screen: chats}}
+      - {key: chat_search, parent: chats_page, role: Edit, id: chat_search, edit: chat_query}
+      - {key: chat_result, parent: chats_page, role: ListItem, id: chat_result, name: "{chat_query}",
+         show_if: {chat_query: [Alice, Bob]}, click: {chat: "{chat_query}"}}
+      - {key: chat_title, parent: chats_page, role: Text, id: chat_title, name: "{chat}", show_if: {chat: [Alice, Bob]}}
+      - {key: attach_button, parent: chats_page, role: Button, id: attach_button, name: Attach,
+         show_if: {chat: [Alice, Bob]}, click: {attaching: "yes", attach: ""}}
+      - {key: file_path, parent: chats_page, role: Edit, id: file_path, show_if: {attaching: "yes"},
+         edit: attach, autofocus: true}
+      - {key: send_button, parent: chats_page, role: Button, id: send_button, name: Send, show_if: {attaching: "yes"},
+         click: {sent: "{attach}", sent_to: "{chat}", attaching: "no"}}
+      - {key: last_sent, parent: chats_page, role: Text, id: last_sent, name: "{sent}", show_if: {sent_to: [Alice, Bob]}}
+      - {key: contacts_page, parent: main, role: Pane, id: contacts_page, show_if: {screen: contacts}}
+      - {key: contact_search, parent: contacts_page, role: Edit, id: contact_search, edit: query}
+      - {key: contact_result, parent: contacts_page, role: ListItem, id: contact_result, name: "{query}",
+         show_if: {query: [Alice, Bob]}, click: {profile: open, profile_contact: "{query}", editing: "no"}}
+      - {key: profile_card, role: Window, id: profile_card, name: Profile, show_if: {profile: open}}
+      - {key: profile_name, parent: profile_card, role: Text, id: profile_name, name: "{profile_contact}"}
+      - {key: message_button, parent: profile_card, role: Button, name: Message, at: [500, 40, 120, 24]}
+      - {key: remark_label, parent: profile_card, role: Text, name: Remark, at: [500, 80, 80, 24]}
+      - {key: remark_button, parent: profile_card, role: Button, name: "{remark}", at: [590, 80, 200, 24],
+         show_if: {editing: "no"}, click: {editing: "yes", draft: "{remark}"}}
+      - {key: remark_edit, parent: profile_card, role: Edit, id: remark_edit, at: [590, 80, 200, 24],
+         show_if: {editing: "yes"}, edit: draft, autofocus: true}
+    keys:
+      - {key: Enter, if: {editing: "yes"}, set: {remark: "{draft}", editing: "no"}}
+      - {key: Escape, if: {editing: "yes"}, set: {editing: "no"}}

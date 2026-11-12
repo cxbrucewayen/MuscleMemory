@@ -1,0 +1,17 @@
+# Simulated DemoChat 5.0 on Android 14. A promotion popup covers the home page on first launch.
+platform: ANDROID
+os_version: "14"
+lang: en-US
+driver_version: 0.1.0
+apps:
+  org.demo.chat:
+    version: 5.0.3
+    state: {promo: shown, checked_in: "no"}
+    nodes:
+      - {key: home, role: android.widget.FrameLayout, id: "org.demo.chat:id/home_root"}
+      - {key: promo_close, parent: home, role: android.widget.ImageView, id: "org.demo.chat:id/promo_close",
+         show_if: {promo: shown}, click: {promo: closed}}
+      - {key: checkin_button, parent: home, role: android.widget.Button, id: "org.demo.chat:id/checkin_button",
+         name: Check in, show_if: {checked_in: "no", promo: closed}, click: {checked_in: "yes"}}
+      - {key: checkin_done, parent: home, role: android.widget.TextView, id: "org.demo.chat:id/checkin_done",
+         name: Checked in, show_if: {checked_in: "yes"}}

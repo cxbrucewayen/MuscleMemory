@@ -1,0 +1,28 @@
+format: 6
+id: FLOW.WEEKLY_REPORT
+aliases:
+  en: [weekly report, send the weekly summary]
+  zh: [周报, 发总结给老板]
+trigger: [manual, schedule Fri 16:30]
+workdir: work
+inputs:
+  tasks: "{workdir}/tasks.csv"
+  report: "{workdir}/summary.txt"
+  boss: Alice
+secrets: []
+when_busy: wait
+steps:
+  - read_table {tasks} where status == "done" and reported != "yes" -> {done}
+  - if {done} empty then end
+  - call RCP.COMMON.DEMOCHAT.SEND_FILE contact={boss} file={report}
+  - write_table {tasks} rows task in {done.task} set reported = "yes"
+check:
+  - "{tasks} rows task in {done.task} column reported all == \"yes\""
+authorize:
+  unattended: [3]
+  files: ["{report}"]
+  recipients: ["{boss}"]
+state: observed
+verified: {count: 0, last: 2026-11-12}
+lessons:
+  - 2026-11-05 the boss stops reading messages after 17:00 on Fridays, so the schedule is 16:30

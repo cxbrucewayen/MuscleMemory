@@ -1,0 +1,95 @@
+format: 6
+platform: ANDROID
+app: DEMOCHAT
+---
+id: APP.ANDROID.DEMOCHAT
+applies:
+  os: ANDROID >=12
+  app: DEMOCHAT >=5.0
+aliases:
+  en: [DemoChat, demo chat]
+  zh: [示例聊天, 演示聊天]
+app_id: org.demo.chat
+home: ELEM.ANDROID.DEMOCHAT.HOME
+evidence: simulated, launched and identified 20 times
+counterexample: none known on 5.x
+state: stable
+verified: {count: 20, last: 2026-11-12}
+---
+id: ELEM.ANDROID.DEMOCHAT.HOME
+applies:
+  os: ANDROID >=12
+  app: DEMOCHAT >=5.0
+purpose:
+  en: The home page after launch
+  zh: 启动后的首页
+locators:
+  - ax id=home_root
+evidence: simulated, located 20 times
+counterexample: the page differs when logged out
+state: stable
+verified: {count: 20, last: 2026-11-12}
+---
+id: ELEM.ANDROID.DEMOCHAT.PROMO_CLOSE
+applies:
+  os: ANDROID >=12
+  app: DEMOCHAT >=5.0
+purpose:
+  en: Close button of the promotion popup that sometimes covers the home page
+  zh: 偶尔盖住首页的活动弹窗上的关闭按钮
+parent: ELEM.ANDROID.DEMOCHAT.HOME
+locators:
+  - ax id=promo_close
+evidence: simulated, located 5 times
+counterexample: absent on days without a promotion
+state: stable
+verified: {count: 5, last: 2026-11-12}
+---
+id: ELEM.ANDROID.DEMOCHAT.CHECKIN_BUTTON
+applies:
+  os: ANDROID >=12
+  app: DEMOCHAT >=5.0
+purpose:
+  en: The daily check-in button on the home page
+  zh: 首页上的每日签到按钮
+parent: ELEM.ANDROID.DEMOCHAT.HOME
+locators:
+  - ax id=checkin_button
+evidence: simulated, located 20 times
+counterexample: replaced by the done badge once checked in
+state: stable
+verified: {count: 20, last: 2026-11-12}
+---
+id: ELEM.ANDROID.DEMOCHAT.CHECKIN_DONE
+applies:
+  os: ANDROID >=12
+  app: DEMOCHAT >=5.0
+purpose:
+  en: Badge shown once today's reward has been collected
+  zh: 当天奖励领取后显示的完成标记
+parent: ELEM.ANDROID.DEMOCHAT.HOME
+locators:
+  - ax id=checkin_done
+evidence: simulated, located 20 times
+counterexample: absent before the button was used that day
+state: stable
+verified: {count: 20, last: 2026-11-12}
+---
+id: RCP.ANDROID.DEMOCHAT.DAILY_CHECKIN
+applies:
+  os: ANDROID >=12
+  app: DEMOCHAT >=5.0
+steps:
+  - open APP.ANDROID.DEMOCHAT
+  - wait ELEM.ANDROID.DEMOCHAT.HOME shown 15s
+  - if ELEM.ANDROID.DEMOCHAT.PROMO_CLOSE visible then click ELEM.ANDROID.DEMOCHAT.PROMO_CLOSE
+  - if ELEM.ANDROID.DEMOCHAT.CHECKIN_DONE visible then end
+  - click! ELEM.ANDROID.DEMOCHAT.CHECKIN_BUTTON
+  - wait ELEM.ANDROID.DEMOCHAT.CHECKIN_DONE shown 10s
+check:
+  - ELEM.ANDROID.DEMOCHAT.CHECKIN_DONE visible
+ends_at: ELEM.ANDROID.DEMOCHAT.HOME
+evidence: simulated, passed check for 20 consecutive runs
+counterexample: home page differs when logged out
+state: stable
+verified: {count: 20, last: 2026-11-12}

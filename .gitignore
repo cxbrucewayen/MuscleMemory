@@ -1,0 +1,16 @@
+# Local, personal, never published (SECURITY 4, gate 1)
+/flows/
+runs/
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+.venv/
+venv/

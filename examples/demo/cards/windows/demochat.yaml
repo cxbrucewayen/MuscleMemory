@@ -1,0 +1,455 @@
+format: 6
+platform: WIN
+app: DEMOCHAT
+---
+id: APP.WIN.DEMOCHAT
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+aliases:
+  en: [DemoChat, demo chat]
+  zh: [示例聊天, 演示聊天]
+app_id: demochat.exe
+home: ELEM.WIN.DEMOCHAT.MAIN
+preferred:
+  en: Accessibility tree first; ids are stable across versions
+  zh: 优先用无障碍树；编号在各版本间保持稳定
+evidence: simulated, launched and identified 3 times
+counterexample: none known on 4.x
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.MAIN
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: The main window
+  zh: 主窗口
+locators:
+  - ax id=main_window
+evidence: simulated, located 3 times
+counterexample: not present while the login window is shown
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.NAV_CONTACTS
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: Sidebar button that switches to the contacts page
+  zh: 侧边栏里切换到通讯录页的按钮
+parent: ELEM.WIN.DEMOCHAT.MAIN
+locators:
+  - ax id=nav_contacts
+evidence: simulated, located 3 times
+counterexample: none known on 4.x
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.NAV_CHATS
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: Sidebar button that switches to the chats page
+  zh: 侧边栏里切换到聊天页的按钮
+parent: ELEM.WIN.DEMOCHAT.MAIN
+locators:
+  - ax id=nav_chats
+evidence: simulated, located 3 times
+counterexample: none known on 4.x
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.CONTACTS
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: The contacts page
+  zh: 通讯录页
+locators:
+  - ax id=contacts_page
+evidence: simulated, located 3 times
+counterexample: none known on 4.x
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.CHATS
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: The chats page
+  zh: 聊天页
+locators:
+  - ax id=chats_page
+evidence: simulated, located 3 times
+counterexample: none known on 4.x
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.CONTACT_SEARCH
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: Search box at the top of the contacts page
+  zh: 通讯录页顶部的搜索框
+parent: ELEM.WIN.DEMOCHAT.CONTACTS
+locators:
+  - ax id=contact_search
+evidence: simulated, located 3 times
+counterexample: none known on 4.x
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.CONTACT_RESULT
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: The first row of the contact search results
+  zh: 联系人搜索结果的第一行
+parent: ELEM.WIN.DEMOCHAT.CONTACTS
+locators:
+  - ax id=contact_result
+evidence: simulated, located 3 times
+counterexample: absent when the search has no match
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.PROFILE_CARD
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: The profile card window of a contact
+  zh: 联系人的资料卡窗口
+locators:
+  - ax id=profile_card
+evidence: simulated, located 3 times
+counterexample: none known on 4.x
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.PROFILE_NAME
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: The contact name shown on the profile card
+  zh: 资料卡上显示的联系人名称
+parent: ELEM.WIN.DEMOCHAT.PROFILE_CARD
+locators:
+  - ax id=profile_name
+evidence: simulated, located 3 times
+counterexample: none known on 4.x
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.REMARK_ROW
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0 <4.2
+purpose:
+  en: The row in the profile card that shows and edits the remark
+  zh: 资料卡里显示和修改备注的那一行
+parent: ELEM.WIN.DEMOCHAT.PROFILE_CARD
+locators:
+  - ax role=Button parent=ELEM.WIN.DEMOCHAT.PROFILE_CARD pick=last
+  - vision the clickable text in the middle of the card, on the remark line
+evidence: simulated on 4.1, the remark is the last Button of the card
+counterexample: on 4.2 the Button is replaced by an Edit
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.REMARK_ROW@4.2
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.2
+  lang: en-US
+locators:
+  - ax role=Edit name="Remark" parent=ELEM.WIN.DEMOCHAT.PROFILE_CARD
+  - text "Remark" right_of
+evidence: simulated on 4.2, original locator found no Button and the Edit worked first try
+state: observed
+verified: {count: 1, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.REMARK_EDIT
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: The text field where the remark is typed
+  zh: 输入备注的文本框
+parent: ELEM.WIN.DEMOCHAT.PROFILE_CARD
+locators:
+  - ax role=Edit parent=ELEM.WIN.DEMOCHAT.PROFILE_CARD
+evidence: simulated on 4.1 and 4.2, located 3 times
+counterexample: on 4.1 it only exists after the remark row was clicked
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.PROFILE_REMARK
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+  lang: en-US
+purpose:
+  en: The control right of the remark label that holds the current remark
+  zh: 备注标签右侧、显示当前备注的控件
+parent: ELEM.WIN.DEMOCHAT.PROFILE_CARD
+locators:
+  - text "Remark" right_of
+evidence: simulated on 4.1 and 4.2, read back 3 times
+counterexample: other UI languages use a different label
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.CHAT_SEARCH
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: Search box at the top of the chats page
+  zh: 聊天页顶部的搜索框
+parent: ELEM.WIN.DEMOCHAT.CHATS
+locators:
+  - ax id=chat_search
+evidence: simulated, located 3 times
+counterexample: none known on 4.x
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.CHAT_RESULT
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: The first row of the chat search results
+  zh: 聊天搜索结果的第一行
+parent: ELEM.WIN.DEMOCHAT.CHATS
+locators:
+  - ax id=chat_result
+evidence: simulated, located 3 times
+counterexample: absent when the search has no match
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.CHAT_TITLE
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: Title of the open conversation, which is the contact name
+  zh: 当前会话的标题，即联系人名称
+parent: ELEM.WIN.DEMOCHAT.CHATS
+locators:
+  - ax id=chat_title
+evidence: simulated, located 3 times
+counterexample: absent when no conversation is open
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.ATTACH_BUTTON
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: Opens the attachment path field of the open conversation
+  zh: 打开当前会话的附件路径输入框
+parent: ELEM.WIN.DEMOCHAT.CHATS
+locators:
+  - ax id=attach_button
+evidence: simulated, located 3 times
+counterexample: absent when no conversation is open
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.FILE_PATH
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: Field that takes the path of the attachment
+  zh: 填写附件路径的输入框
+parent: ELEM.WIN.DEMOCHAT.CHATS
+locators:
+  - ax id=file_path
+evidence: simulated, located 3 times
+counterexample: only present after the attach button was clicked
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.SEND_BUTTON
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: Sends the attachment to the open conversation
+  zh: 把附件发送给当前会话
+parent: ELEM.WIN.DEMOCHAT.CHATS
+locators:
+  - ax id=send_button
+evidence: simulated, located 3 times
+counterexample: only present after the attach button was clicked
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: ELEM.WIN.DEMOCHAT.LAST_SENT
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+purpose:
+  en: The last item that went out in the open conversation
+  zh: 当前会话里最后一条已发出的内容
+parent: ELEM.WIN.DEMOCHAT.CHATS
+locators:
+  - ax id=last_sent
+evidence: simulated, located 3 times
+counterexample: absent until something was sent
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: RCP.WIN.DEMOCHAT.MAIN_TO_CONTACTS
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+aliases:
+  en: [open contacts]
+  zh: [打开通讯录]
+goal:
+  en: Go from the main window to the contacts page
+  zh: 从主界面进入通讯录
+side_effect: none
+requires:
+  - ELEM.WIN.DEMOCHAT.MAIN visible
+steps:
+  - click ELEM.WIN.DEMOCHAT.NAV_CONTACTS
+  - wait ELEM.WIN.DEMOCHAT.CONTACTS shown 5s
+check:
+  - ELEM.WIN.DEMOCHAT.CONTACTS visible
+ends_at: ELEM.WIN.DEMOCHAT.CONTACTS
+evidence: simulated, 4 runs passed check
+counterexample: none known on 4.x
+state: stable
+verified: {count: 4, last: 2026-11-12}
+---
+id: RCP.WIN.DEMOCHAT.MAIN_TO_CHATS
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+aliases:
+  en: [open chats]
+  zh: [打开聊天页]
+goal:
+  en: Go from the main window to the chats page
+  zh: 从主界面进入聊天页
+side_effect: none
+requires:
+  - ELEM.WIN.DEMOCHAT.MAIN visible
+steps:
+  - click ELEM.WIN.DEMOCHAT.NAV_CHATS
+  - wait ELEM.WIN.DEMOCHAT.CHATS shown 5s
+check:
+  - ELEM.WIN.DEMOCHAT.CHATS visible
+ends_at: ELEM.WIN.DEMOCHAT.CHATS
+evidence: simulated, 4 runs passed check
+counterexample: none known on 4.x
+state: stable
+verified: {count: 4, last: 2026-11-12}
+---
+id: RCP.WIN.DEMOCHAT.OPEN_PROFILE
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+aliases:
+  en: [open contact profile]
+  zh: [打开联系人资料卡]
+params: [contact]
+goal: The profile card of {contact} is open
+side_effect: none
+requires:
+  - ELEM.WIN.DEMOCHAT.CONTACTS visible
+steps:
+  - click ELEM.WIN.DEMOCHAT.CONTACT_SEARCH
+  - key Ctrl+A
+  - call RCP.COMMON.INPUT_TEXT text={contact}
+  - wait ELEM.WIN.DEMOCHAT.CONTACT_RESULT shown 5s
+  - click ELEM.WIN.DEMOCHAT.CONTACT_RESULT
+  - wait ELEM.WIN.DEMOCHAT.PROFILE_CARD shown 5s
+check:
+  - ELEM.WIN.DEMOCHAT.PROFILE_NAME text == {contact}
+ends_at: ELEM.WIN.DEMOCHAT.PROFILE_CARD
+evidence: simulated, 3 runs passed check
+counterexample: a name with no match leaves the result list empty
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: RCP.WIN.DEMOCHAT.RENAME_REMARK
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+requires:
+  - ELEM.WIN.DEMOCHAT.MAIN visible
+steps:
+  - call RCP.WIN.DEMOCHAT.OPEN_PROFILE contact={contact}
+  - move_window ELEM.WIN.DEMOCHAT.PROFILE_CARD away_from ELEM.WIN.DEMOCHAT.MAIN
+  - click ELEM.WIN.DEMOCHAT.REMARK_ROW
+  - wait ELEM.WIN.DEMOCHAT.REMARK_EDIT shown 5s
+  - key Ctrl+A
+  - call RCP.COMMON.INPUT_TEXT text={remark}
+  - key! Enter
+check:
+  - ELEM.WIN.DEMOCHAT.PROFILE_REMARK value == {remark}
+ends_at: ELEM.WIN.DEMOCHAT.PROFILE_CARD
+notes:
+  en: Step 2 exists because of FAIL.WIN.DEMOCHAT.CARD_BEHIND
+  zh: 第 2 步的原因见 FAIL.WIN.DEMOCHAT.CARD_BEHIND
+evidence: simulated on 4.1, 3 runs passed check
+counterexample: contacts without a profile card have no remark row
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: RCP.WIN.DEMOCHAT.SEND_FILE
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+requires:
+  - ELEM.WIN.DEMOCHAT.CHATS visible
+steps:
+  - click ELEM.WIN.DEMOCHAT.CHAT_SEARCH
+  - key Ctrl+A
+  - call RCP.COMMON.INPUT_TEXT text={contact}
+  - click ELEM.WIN.DEMOCHAT.CHAT_RESULT
+  - assert ELEM.WIN.DEMOCHAT.CHAT_TITLE text == {contact}
+  - click ELEM.WIN.DEMOCHAT.ATTACH_BUTTON
+  - wait ELEM.WIN.DEMOCHAT.FILE_PATH shown 5s
+  - call RCP.COMMON.INPUT_TEXT text={file}
+  - click! ELEM.WIN.DEMOCHAT.SEND_BUTTON
+  - wait ELEM.WIN.DEMOCHAT.LAST_SENT shown 5s
+check:
+  - ELEM.WIN.DEMOCHAT.CHAT_TITLE text == {contact}
+  - ELEM.WIN.DEMOCHAT.LAST_SENT text == {file}
+ends_at: ELEM.WIN.DEMOCHAT.CHATS
+evidence: simulated, 3 runs passed check
+counterexample: a contact with no existing conversation is not in the chat search
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: FAIL.WIN.DEMOCHAT.CARD_BEHIND
+applies:
+  os: WIN >=10.0
+  app: DEMOCHAT >=4.0
+symptom:
+  en: Clicks on the profile card have no effect; the card opened behind the main window
+  zh: 点击资料卡没有反应；资料卡在主窗口后面打开
+conclusion:
+  en: The card overlaps the main window; moving it clear before clicking makes clicks land
+  zh: 资料卡与主窗口重叠；点击前先把它移出主窗口范围，点击才会生效
+evidence: simulated, observed twice before the move step was added
+state: reproduced
+verified: {count: 2, last: 2026-11-12}

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "musclememory"
+version = "0.1.0"
+description = "Muscle memory for AI agents: versioned, verifiable GUI-automation experience cards that AI can read and programs can run."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6.0"]
+keywords = ["computer-use", "cua", "gui-automation", "mcp", "agent", "rpa"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+]
+
+[project.optional-dependencies]
+xlsx = ["openpyxl>=3.1"]
+keychain = ["keyring>=24"]
+dev = ["pytest>=7", "ruff>=0.4", "openpyxl>=3.1"]
+
+[project.scripts]
+kb = "musclememory.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501", "B904"]

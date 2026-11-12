@@ -1,0 +1,41 @@
+format: 6
+platform: COMMON
+app: DEMOCHAT
+---
+id: RCP.COMMON.DEMOCHAT.RENAME_REMARK
+applies:
+  os: any
+  app: DEMOCHAT any
+aliases:
+  en: [rename remark, set contact remark]
+  zh: [改备注, 修改备注名, 设置备注]
+params: [contact, remark]
+goal:
+  en: The profile of {contact} shows {remark} as its remark
+  zh: "{contact} 的资料卡上备注显示为 {remark}"
+side_effect: external
+---
+id: RCP.COMMON.DEMOCHAT.SEND_FILE
+applies:
+  os: any
+  app: DEMOCHAT any
+aliases:
+  en: [send file, send a file in chat]
+  zh: [发文件, 发送文件]
+params: [contact, file]
+goal:
+  en: The chat with {contact} shows {file} as the last item sent
+  zh: 与 {contact} 的聊天里，最后一条已发出的内容是 {file}
+side_effect: external
+---
+id: RCP.COMMON.DEMOCHAT.DAILY_CHECKIN
+applies:
+  os: any
+  app: DEMOCHAT any
+aliases:
+  en: [daily check-in, check in]
+  zh: [每日签到, 签到]
+goal:
+  en: Today's check-in is marked as done
+  zh: 今天的签到显示为已完成
+side_effect: external

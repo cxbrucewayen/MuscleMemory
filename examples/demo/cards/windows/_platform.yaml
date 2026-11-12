@@ -1,0 +1,46 @@
+format: 6
+platform: WIN
+app: _platform
+---
+id: ENV.WIN
+applies:
+  os: WIN >=10.0
+capabilities:
+  en: Accessibility tree with role, name, id and value; clipboard; key combos; background input
+  zh: 可读取无障碍树（角色、名称、编号、值）；可用剪贴板与组合键；支持后台输入
+limits:
+  en: Simulated environment for the demo; elements without an id need role or text locators
+  zh: 演示用的模拟环境；没有编号的控件只能用角色或文字定位
+version_probe:
+  en: OS and app versions are reported by the driver's environment snapshot
+  zh: 系统与软件版本由驱动的环境快照给出
+evidence: simulated environment, snapshot read 3 times
+counterexample: a real desktop reports versions through the OS, not through the simulator
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: RCP.WIN.INPUT_TEXT
+applies:
+  os: WIN >=10.0
+steps:
+  - clipboard {text}
+  - key Ctrl+V
+check:
+  - focus value == {text}
+evidence: simulated, 3 runs passed check with ASCII and CJK text
+counterexample: fields that block paste need per-key typing instead
+state: stable
+verified: {count: 3, last: 2026-11-12}
+---
+id: FAIL.WIN.PASTE_BLOCKED
+applies:
+  os: WIN >=10.0
+symptom:
+  en: After Ctrl+V the focused field stays empty and the input check fails
+  zh: 按下 Ctrl+V 后输入框仍为空，输入校验失败
+conclusion:
+  en: The field rejects paste; per-key typing works for ASCII, IME input is needed otherwise
+  zh: 该输入框禁止粘贴；ASCII 可改为逐键输入，其余需走输入法
+evidence: simulated once with a paste-blocking field
+state: observed
+verified: {count: 1, last: 2026-11-12}

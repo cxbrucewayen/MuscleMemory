@@ -1,0 +1,16 @@
+format: 6
+id: FLOW.DAILY_CHECKIN
+aliases:
+  en: [daily check-in job]
+  zh: [每日签到任务]
+trigger: [schedule daily 08:10]
+workdir: work
+when_busy: wait
+steps:
+  - call RCP.COMMON.DEMOCHAT.DAILY_CHECKIN
+check:
+  - step 1 succeeded
+authorize:
+  unattended: [1]
+state: observed
+verified: {count: 0, last: 2026-11-12}

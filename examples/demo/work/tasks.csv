@@ -1,0 +1,5 @@
+task,status,reported
+write spec,done,yes
+fix login bug,done,no
+ship demo,done,no
+plan Q1,open,no

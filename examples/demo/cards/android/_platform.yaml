@@ -1,0 +1,20 @@
+format: 6
+platform: ANDROID
+app: _platform
+---
+id: ENV.ANDROID
+applies:
+  os: ANDROID >=12
+capabilities:
+  en: UI hierarchy with class, text, resource id and bounds; tap, swipe and key events
+  zh: 可读取界面层级（类名、文字、资源编号、位置）；可点击、滑动、发送按键
+limits:
+  en: Simulated environment for the demo; no clipboard access, so text is typed per key
+  zh: 演示用的模拟环境；无法访问剪贴板，文字只能逐键输入
+version_probe:
+  en: OS and app versions are reported by the driver's environment snapshot
+  zh: 系统与软件版本由驱动的环境快照给出
+evidence: simulated environment, snapshot read 3 times
+counterexample: vendor ROMs can add permission dialogs that the stock system does not show
+state: stable
+verified: {count: 3, last: 2026-11-12}

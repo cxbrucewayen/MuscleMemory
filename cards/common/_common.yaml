@@ -1,0 +1,15 @@
+format: 6
+platform: COMMON
+app: _platform
+---
+id: RCP.COMMON.INPUT_TEXT
+applies:
+  os: any
+aliases:
+  en: [input text, type text reliably]
+  zh: [输入文本, 输入文字]
+params: [text]
+goal:
+  en: The focused field contains {text}, including non-ASCII characters
+  zh: 当前焦点所在的输入框里出现 {text}，包括中文等非 ASCII 字符
+side_effect: none

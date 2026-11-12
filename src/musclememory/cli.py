@@ -14,14 +14,22 @@ from .cards import KB, find_root, load_config, load_yaml, parse_id
 from .check import check_kb
 from .drivers import DriverError, make_driver
 from .executor import Executor
-from .flows import FlowError, FlowRunner, approve, find_flow_path, flow_bang_steps, list_flows, load_flow, tick
+from .flows import (
+    FlowError,
+    FlowRunner,
+    approve,
+    find_flow_path,
+    flow_bang_steps,
+    list_flows,
+    load_flow,
+    tick,
+)
 from .fmt import dump_card, format_file
 from .grammar import SECRET_RE
 from .i18n import FIELDS_ZH, VALUES_ZH, VERBS_ZH
 from .propose import ProposalError, merge, propose
 from .resolve import resolve
-from .search import (guess_app, index_text, kb_bundle, kb_outline, kb_resolve, kb_screen, kb_symptom,
-                     localize)
+from .search import guess_app, index_text, kb_bundle, kb_outline, kb_resolve, kb_screen, kb_symptom, localize
 from .secrets import SecretError, SecretStore
 from .versions import Env
 
@@ -369,9 +377,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--driver", help="sim:<file.yaml> | adb[:serial] | cua (default: $KB_DRIVER or config.yaml)")
     p.add_argument("--lang", help="display language, e.g. en or zh-CN")
     sub = p.add_subparsers(dest="cmd", required=True)
+    # The global options are also accepted after the subcommand: `kb find x --env ...`.
+    common = argparse.ArgumentParser(add_help=False)
+    for flag in ("--root", "--env", "--driver", "--lang"):
+        common.add_argument(flag, default=argparse.SUPPRESS, help=argparse.SUPPRESS)
 
     def add(name, fn, help_):
-        sp = sub.add_parser(name, help=help_)
+        sp = sub.add_parser(name, help=help_, parents=[common])
         sp.set_defaults(fn=fn)
         return sp
 

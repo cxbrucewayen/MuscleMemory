@@ -49,7 +49,7 @@ EXFIL = [
     (re.compile(r"```|\]\(|<\s*(script|img|a|iframe)\b", _I), "code block, link or markup"),
 ]
 PRIVACY = [
-    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9.-]+"), "email address"),
+    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}"), "email address"),
     (re.compile(r"(?<!\d)1[3-9]\d{9}(?!\d)"), "mainland China mobile number"),
     (re.compile(r"(?<![\w.])\+\d[\d \-]{7,16}\d"), "international phone number"),
     (re.compile(r"(?<!\d)\d{17}[\dXx](?!\d)"), "resident ID number"),
@@ -73,7 +73,7 @@ PLACEHOLDER_RULES = [
     (re.compile(r"[A-Za-z]:\\+Users\\+[^\\\s<>\"']+", _I), "<USER_HOME>"),
     (re.compile(r"/(?:home|Users)/[^/\s<>\"']+"), "<USER_HOME>"),
     (re.compile(r"%(USERPROFILE|HOMEPATH)%", _I), "<USER_HOME>"),
-    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9.-]+"), "<EMAIL>"),
+    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}"), "<EMAIL>"),
     (re.compile(r"(?<!\d)1[3-9]\d{9}(?!\d)"), "<PHONE>"),
     (re.compile(r"(?<![\w.])\+\d[\d \-]{7,16}\d"), "<PHONE>"),
 ]

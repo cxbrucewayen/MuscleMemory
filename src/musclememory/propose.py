@@ -10,7 +10,7 @@ from pathlib import Path
 import yaml
 
 from . import FORMAT
-from .cards import (ALLOWED_FIELDS, DIR_OF_PLATFORM, KB, load_yaml, load_yaml_docs, parse_id)
+from .cards import ALLOWED_FIELDS, DIR_OF_PLATFORM, KB, load_yaml, load_yaml_docs, parse_id
 from .check import check_card_dict, check_kb
 from .fmt import CARD_ORDER, HEADER_ORDER, PROPOSAL_ORDER, dump_doc
 from .grammar import ID_RE
@@ -93,7 +93,8 @@ def normalize(text: str) -> dict:
     if "evidence" not in out:
         problems.append("evidence is required: what you observed, as structure (controls, error codes), not content")
 
-    out = redact_doc(out)                       # known personal formats -> placeholders
+    # known personal formats -> placeholders (the target id is validated separately)
+    out = {k: (v if k in KINDS else redact_doc(v)) for k, v in out.items()}
     problems.extend(check_card_dict(out))
     if parts.type == "ELEM" and "locators" in out:
         from .grammar import GrammarError, parse_locator

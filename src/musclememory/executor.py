@@ -519,6 +519,8 @@ class Executor:
                 if present == (st.mode == "shown"):
                     break
                 if d.now() >= deadline:
+                    self.tried = []
+                    self._locate(st.target, app_id, self.tried)
                     raise _StepError(f"timed out waiting for {st.target} to be {st.mode}", retry=False)
                 d.sleep(POLL)
         elif v == "read":

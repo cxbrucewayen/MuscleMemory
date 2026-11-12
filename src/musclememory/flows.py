@@ -21,8 +21,17 @@ from pathlib import Path
 from .cards import KB, STATE_RANK, Card, load_yaml, parse_id, swap_platform
 from .executor import Executor, trace_secret
 from .fmt import FLOW_ORDER, dump_card, dump_doc
-from .grammar import (SECRET_RE, TEMPLATE_VAR, GrammarError, Lit, Template, Var, parse_flow_condition,
-                      parse_flow_step, parse_step)
+from .grammar import (
+    SECRET_RE,
+    TEMPLATE_VAR,
+    GrammarError,
+    Lit,
+    Template,
+    Var,
+    parse_flow_condition,
+    parse_flow_step,
+    parse_step,
+)
 from .i18n import canon_doc
 from .resolve import element_refs, recipe_refs, static_merge
 from .secrets import NAME_RE as SECRET_NAME_RE

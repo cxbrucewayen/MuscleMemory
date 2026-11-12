@@ -11,11 +11,28 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import FORMAT
-from .cards import (ALLOWED_FIELDS, KB, REQUIRED_FIELDS, SIDE_RANK, STATE_RANK, Card,
-                    expected_location, parse_id, swap_platform)
+from .cards import (
+    ALLOWED_FIELDS,
+    KB,
+    REQUIRED_FIELDS,
+    SIDE_RANK,
+    STATE_RANK,
+    Card,
+    expected_location,
+    parse_id,
+    swap_platform,
+)
 from .fmt import card_line_count
-from .grammar import (ID_RE, NAME_RE, POINTER_VERBS, GrammarError, Var, parse_condition,
-                      parse_locator, parse_step)
+from .grammar import (
+    ID_RE,
+    NAME_RE,
+    POINTER_VERBS,
+    GrammarError,
+    Var,
+    parse_condition,
+    parse_locator,
+    parse_step,
+)
 from .i18n import all_langs
 from .resolve import MAX_CALL_DEPTH, static_merge
 from .scan import HIDDEN, scan_doc

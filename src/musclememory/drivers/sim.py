@@ -179,8 +179,9 @@ class SimDriver(Driver):
         spec = self._node(app, node)
         self.log.append(f"{'right_' if button == 'right' else ''}{'double_' if count == 2 else ''}click {spec.get('key')}")
         self._selected[app_id] = False
-        if "edit" in spec:
-            self._focus[app_id] = spec["key"]
+        # Clicking a field focuses it; clicking anything else drops the focus,
+        # so a newly shown autofocus field takes it.
+        self._focus[app_id] = spec["key"] if "edit" in spec else None
         action = spec.get("right_click" if button == "right" else ("double_click" if count == 2 else "click"))
         if action is None and count == 2:
             action = spec.get("click")

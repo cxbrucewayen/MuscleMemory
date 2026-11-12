@@ -1,0 +1,20 @@
+{
+ "aliases": {
+  "input text": [
+   "RCP.COMMON.INPUT_TEXT"
+  ],
+  "type text reliably": [
+   "RCP.COMMON.INPUT_TEXT"
+  ],
+  "输入文字": [
+   "RCP.COMMON.INPUT_TEXT"
+  ],
+  "输入文本": [
+   "RCP.COMMON.INPUT_TEXT"
+  ]
+ },
+ "cards": 1,
+ "format": 6,
+ "screens": {},
+ "symptoms": {}
+}

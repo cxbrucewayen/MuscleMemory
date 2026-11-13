@@ -762,10 +762,9 @@ class FlowRunner:
             for name, val in args.items():
                 if isinstance(val, Secret):
                     continue
-                as_path = Path(val) if not Path(val).is_absolute() else Path(val)
-                if (Path(scope["workdir"]) / as_path).is_file() or as_path.is_file():
-                    real = str((as_path if as_path.is_absolute() else Path(scope["workdir"]) / as_path).resolve())
-                    if real not in files:
+                as_path = Path(val) if Path(val).is_absolute() else Path(scope["workdir"]) / val
+                if as_path.is_file():
+                    if str(as_path.resolve()) not in files:
                         raise _Pause(f"{where}: file argument {name!r} is not in authorize.files; stopping")
                 elif name.lower() in RECIPIENT_PARAMS and val not in people:
                     raise _Pause(f"{where}: recipient argument {name!r} is not in authorize.recipients; stopping")

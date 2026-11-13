@@ -105,6 +105,9 @@ def test_flow_grammar_has_no_ui_verbs():
     parse_flow_step("wait_file {run_dir}/out.xlsx 30s")
     parse_flow_step('confirm "Send it?"')
     parse_flow_condition('{tasks} rows task in {done.task} column reported all == "yes" and step 1 succeeded')
+    for bad in ("{t} rows a == 1 column b all ==", "{t} rows a == 1 column b", "{t} rows", "step one succeeded"):
+        with pytest.raises(GrammarError):
+            parse_flow_condition(bad)
     for bad in ("click ELEM.WIN.A.X", "type {x}", "key Enter", "open APP.WIN.A", "if {x} empty then call RCP.WIN.A.B"):
         with pytest.raises(GrammarError):
             parse_flow_step(bad)

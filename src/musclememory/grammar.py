@@ -221,9 +221,7 @@ def parse_flow_condition(s: str | list[str]) -> Cond:
                     c = toks.index("column", i + 2)
                 except ValueError:
                     raise GrammarError("expected: {file} rows <row condition> column <col> all == <value>")
-                if c + 4 >= n + 0 and c + 4 != n - 0 and c + 4 > n - 1:
-                    raise GrammarError("incomplete table check")
-                if toks[c + 2:c + 4] != ["all", "=="]:
+                if c + 4 >= n or toks[c + 2:c + 4] != ["all", "=="]:
                     raise GrammarError("expected: column <col> all == <value>")
                 atoms.append(Atom("table_all", subj, "==", parse_value(toks[c + 4], allow_number=True),
                                   {"rows": parse_row_condition(toks[i + 2:c]), "column": _column(toks[c + 1])}))

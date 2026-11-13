@@ -189,3 +189,36 @@ def test_merge_sets_observed_and_update_promotes(kb, demo):
     upd = "update: ELEM.WIN.DEMOCHAT.REMARK_ROW@4.3\nenv: {os: WIN 10.0.22631, lang: en-US}\nevidence: matched and passed check\n"
     p2, _ = propose(kb2, upd)
     assert "reproduced" in merge(kb2, p2)
+
+
+def test_readme_examples_are_valid_cards_and_flows():
+    """The illustrative snippets in both READMEs must be real, parseable syntax."""
+    import re
+
+    from conftest import REPO
+
+    from musclememory.cards import load_yaml_docs
+    from musclememory.check import check_card_dict
+    from musclememory.grammar import parse_flow_condition, parse_flow_step
+    from musclememory.i18n import canon_doc
+    from musclememory.scan import scan_doc
+
+    seen = {"flow": 0, "card": 0}
+    for name in ("README.md", "README.zh-CN.md"):
+        text = (REPO / name).read_text(encoding="utf-8")
+        for block in re.findall(r"```yaml\n(.*?)```", text, flags=re.S):
+            for doc in load_yaml_docs(block):
+                doc = canon_doc(doc)
+                if str(doc.get("id", "")).startswith("FLOW."):
+                    for step in doc["steps"]:
+                        parse_flow_step(step)
+                    for cond in doc["check"]:
+                        parse_flow_condition(cond)
+                    used = set(re.findall(r"\{secret:([A-Z0-9_]+)\}", str(doc.get("inputs"))))
+                    assert used == set(doc.get("secrets") or []), name
+                    seen["flow"] += 1
+                else:
+                    assert check_card_dict(doc) == [], (name, doc.get("id"))
+                    assert scan_doc(doc) == [], (name, doc.get("id"))
+                    seen["card"] += 1
+    assert seen["flow"] >= 2 and seen["card"] >= 4

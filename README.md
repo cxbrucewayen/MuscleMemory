@@ -1,34 +1,124 @@
-# MuscleMemory
+# Never retype your resume into Workday again
 
 **English** | [简体中文](./README.zh-CN.md)
 
 [![CI](https://github.com/cxbrucewayen/MuscleMemory/actions/workflows/ci.yml/badge.svg)](https://github.com/cxbrucewayen/MuscleMemory/actions/workflows/ci.yml)
 
-> **Muscle memory for AI agents.** The first time, the AI figures a GUI task out. After that, a program replays the experience, and the AI only steps back in when something changed.
+**MuscleMemory is muscle memory for AI agents.** The first time, the AI works out how to get through a form or an app. It leaves that experience behind as a small, reviewable card. After that a program replays the card, and the AI only steps back in when the screen has changed.
 
-**Status: working baseline (v0.1).** The `kb` command line, the checker, the resolver, the executor, flows, secrets and an MCP server are implemented and tested against a built-in UI simulator. Real-device drivers exist for Android (`adb`) and desktop (`cua-driver`, experimental) but have not been run against real devices in this repository's CI. The public card library is still almost empty: verified cards arrive through proposals. See [docs/STATUS.md](./docs/STATUS.md) for exactly what is and is not done.
+> **Status: working baseline (v0.1).** The engine is built and tested: the `kb` command line, the checker, the executor, flows, secrets and an MCP server, all exercised against a built-in UI simulator. **The Workday and expense cards shown below do not exist in the library yet.** They show what the project is for, and they are the first cards we want to build with contributors. Real-device drivers (`adb`, `cua-driver`) are written but unverified. Details: [docs/STATUS.md](./docs/STATUS.md).
 
 ---
 
-## Why
+## The example: applying for jobs on Workday
 
-Computer-use agents can already operate a desktop or a phone, but every run starts from zero: take a screenshot, understand the UI, guess the button, try again.
+**The pain.** You upload your résumé, and then you type it all again: name, phone, every job, every school, every date. Then you do the same at the next company, because each company runs its own Workday site with its own account and a form that is almost, but not quite, the same.
 
-- **Slow and expensive.** The hundredth run costs as much time and as many tokens as the first.
-- **Unstable.** It clicked the right thing today; tomorrow's app update moves it.
-- **Nothing accumulates.** The pitfall you hit will be hit again, by you and by everyone else.
+**Why an AI agent alone does not fix it.** An agent can fill the form, but it relearns the form on every application: screenshot, guess, click, retry. That is slow and costly, and it fails in a new way each time.
 
-Classic RPA scripts are fast, but people record and maintain them, and they break when the UI changes.
+**With MuscleMemory:**
 
-**MuscleMemory combines the two: the AI explores and repairs; experience is reused and executed.**
+- **Your résumé lives in one local file.** A *flow* on your machine holds your details and the order of the pages. It is never published.
+- **The form knowledge lives in shared cards.** A card says where the "Phone" field is and how to tell the page was saved. It contains no personal data, so it can be open source.
+- **Small differences between companies are expected.** A field keeps several ordered ways to find it, and a field only some companies ask for is wrapped in `if … visible`.
+- **When a form defeats the cards, the AI finishes that one application and proposes the fix.** Once a maintainer has reproduced it, everyone has it. One person repairs it, everyone benefits.
+- **Nothing is submitted without you.** The flow stops for your review, and the submit click is marked `!`, which always needs your say-so.
+- **Your password never reaches the AI.** It is stored on your machine and typed by the executor.
+
+Your side, private and local (`flows/apply-workday.flow.yaml`):
+
+```yaml
+format: 6
+id: FLOW.APPLY_WORKDAY
+aliases:
+  en: [apply on workday, submit job application]
+trigger: [manual]
+workdir: <your job search folder>
+inputs:
+  resume: "{workdir}/resume.pdf"
+  email: <your login e-mail>
+  password: "{secret:WORKDAY_PASSWORD}"       # stored with `kb secret set`, never shown to the AI
+  first_name: <first name>
+  last_name: <last name>
+  phone: <phone>
+  job1_company: <most recent employer>
+  job1_title: <job title>
+secrets: [WORKDAY_PASSWORD]
+steps:
+  - call RCP.COMMON.WORKDAY.SIGN_IN email={email} password={password}
+  - call RCP.COMMON.WORKDAY.UPLOAD_RESUME file={resume}
+  - call RCP.COMMON.WORKDAY.FILL_MY_INFORMATION first_name={first_name} last_name={last_name} phone={phone}
+  - call RCP.COMMON.WORKDAY.ADD_EXPERIENCE company={job1_company} title={job1_title}
+  - confirm "The application is filled in. Review it in the browser. Submit?"
+  - call RCP.COMMON.WORKDAY.SUBMIT_APPLICATION
+check:
+  - step 6 succeeded
+state: observed
+verified: {count: 0, last: 2026-11-13}
+```
+
+The shared side, public cards with no personal data (illustrative; the ids are made up):
+
+```yaml
+id: ELEM.WIN.WORKDAY.PHONE
+applies:
+  os: WIN >=10.0
+  app: WORKDAY any
+  lang: en-US
+purpose: The phone number field on the "My Information" page
+parent: ELEM.WIN.WORKDAY.MY_INFORMATION
+locators:                                     # tried in order; a later one working is reported back
+  - ax id=phone-number
+  - ax role=Edit name="Phone Number"
+  - text "Phone Number" below
+---
+id: RCP.WIN.WORKDAY.SUBMIT_APPLICATION
+applies:
+  os: WIN >=10.0
+  app: WORKDAY any
+requires:
+  - ELEM.WIN.WORKDAY.REVIEW_PAGE visible
+steps:
+  - click! ELEM.WIN.WORKDAY.SUBMIT_BUTTON      # ! = external effect; always needs your authorization
+  - wait ELEM.WIN.WORKDAY.SUBMITTED_NOTICE shown 30s
+check:
+  - ELEM.WIN.WORKDAY.SUBMITTED_NOTICE visible
+ends_at: ELEM.WIN.WORKDAY.SUBMITTED_NOTICE
+```
+
+**What this example still needs.** Two things are not modelled yet: a site inside a browser as a first-class "app", and choosing a card *by company*. Today a variant card is chosen by app version, UI language and vendor ROM. Until a per-site dimension is added, company differences are handled by ordered locators and `if` guards, not by per-company variants.
+
+## A second example: expense claims on a company portal
+
+**The pain.** Every month: find the invoice e-mail, download the PDF, open the company's approval system, upload, pick the project, pick the category, submit. The system usually has no API, so it is all clicking.
+
+**What MuscleMemory adds:**
+
+- **One flow across two apps.** The mail client saves the invoice; the approval system receives it.
+- **The password stays on your machine.**
+- **It stops before submitting** so you can check the amount, project and category.
+- **When the portal is redesigned, the AI takes over once and proposes the repair.**
+
+**The limit.** Every company's approval system is different, so these cards mostly belong in a team-internal library, not the public one. That works today: a library is just a git repository with a `cards/` folder, and `KB_ROOT` points at it.
+
+## Also a good fit
+
+- Expense tools such as Expensify or Concur
+- Entering data into older enterprise software such as SAP GUI
+- Listing the same product on several marketplaces
+- Filing a daily work log in a team chat app
+
+The pattern is the same each time: a GUI with no usable API, the same steps every time, small differences between versions or sites.
+
+---
+
+## How it works
 
 ```
 First time:  the AI looks, explores, finishes the task  ──►  distilled into experience cards
 Afterwards:  look up the cards for this environment      ──►  a program runs them (fast, zero tokens)
 When broken: the app changed, a locator fails            ──►  hand over to the AI ──► it proposes a fix ──► runs directly again
 ```
-
-## What it is
 
 | | Metaphor | Problem it solves |
 |---|---|---|
@@ -46,13 +136,13 @@ They are not competitors. MuscleMemory exposes its tools over **MCP**, ships a *
 - **Self-healing.** Each element keeps several locators and a one-line `purpose`. When all locators fail, the executor hands over to the AI with a structured package; the AI finishes the task and proposes a variant.
 - **Fast retrieval.** The environment narrows the scope to a few files; then one of three entry points (task, error, screen) finds the card. Related cards come back as one bundle of bounded size.
 - **Navigation.** Side-effect-free recipes form a graph between screens; the executor walks to the required screen first.
-- **Flows.** Chain several apps into one errand, for example "task list → summary → send to the boss → write back". Data passing, checkpoints, resume and schedules are built in.
+- **Flows.** Chain several apps into one errand. Data passing, checkpoints, resume and schedules are built in.
 - **Security first.** The grammar is the whitelist: there is no way to spell "run a command" or "open a URL". External experience is quarantined until someone reproduces it. Unattended jobs only run the exact version you approved. Passwords only ever flow into an input field.
-- **Global, with first-class Chinese support.** The repository stores an English canonical form; every field name, verb and keyword also has a Chinese alias, and aliases are matched in all languages.
+- **Global, with first-class Chinese support.** The repository stores an English canonical form; every field name, verb and keyword also has a Chinese alias (`点击! ELEM...`, `步骤:`, `状态: 稳定`), and aliases are matched in all languages.
 
-## Try it in two minutes
+## Try the engine in two minutes
 
-No device needed: the demo library runs against a simulated chat app.
+No device needed. The Workday and expense cards above are not written yet, so the runnable demo uses a simulated chat app. It exercises the same machinery: a recipe, a `!` confirmation, a version variant, a hand-off, and a flow.
 
 ```bash
 git clone https://github.com/cxbrucewayen/MuscleMemory && cd MuscleMemory
@@ -90,7 +180,7 @@ directly runnable: no (ELEM.WIN.DEMOCHAT.REMARK_ROW@4.2 is observed, needs at le
 ...
 ```
 
-The same reference resolved to a different element card, and because that variant has only been seen once, the program refuses to run it unattended and leaves it to the AI (`kb run --force ...` performs the trial run).
+The same reference resolved to a different element card. That variant has only been seen once, so the program refuses to run it unattended and leaves it to the AI (`kb run --force ...` performs the trial run).
 
 More to try:
 
@@ -104,38 +194,6 @@ kb outline                                                # one line per card in
 cp -r examples/demo /tmp/mm-demo
 kb --root /tmp/mm-demo --driver sim:/tmp/mm-demo/sim/windows-4.1.yaml flow run FLOW.WEEKLY_REPORT
 ```
-
-## One card
-
-Experience is stored as cards in plain YAML:
-
-```yaml
-id: RCP.WIN.DEMOCHAT.RENAME_REMARK        # TYPE.PLATFORM.APP.NAME
-applies:
-  os: WIN >=10.0
-  app: DEMOCHAT >=4.0
-steps:
-  - call RCP.WIN.DEMOCHAT.OPEN_PROFILE contact={contact}
-  - click ELEM.WIN.DEMOCHAT.REMARK_ROW
-  - wait ELEM.WIN.DEMOCHAT.REMARK_EDIT shown 5s
-  - key Ctrl+A
-  - call RCP.COMMON.INPUT_TEXT text={remark}
-  - key! Enter                            # ! = external effect; needs authorization
-check:
-  - ELEM.WIN.DEMOCHAT.PROFILE_REMARK value == {remark}
-ends_at: ELEM.WIN.DEMOCHAT.PROFILE_CARD
-state: stable
-```
-
-The same sentence, "rename the remark", resolves differently per environment:
-
-| Environment | What is used |
-|---|---|
-| Windows + DemoChat 4.1 | the Windows recipe + the base locator of the remark row |
-| Windows + DemoChat 4.2 | the Windows recipe + the `@4.2` variant of the remark row |
-| Android + DemoChat 5.0 | no recipe yet → the AI explores, then contributes `RCP.ANDROID.DEMOCHAT.RENAME_REMARK` |
-
-Chinese spelling is equivalent everywhere (`点击! ELEM...`, `步骤:`, `状态: 稳定`); `kb fmt` converts to the canonical form.
 
 ## Use it with a real device
 
@@ -198,7 +256,7 @@ Steps marked `!` are confirmed by the user through MCP elicitation when the clie
 | Runs without a model | no | yes | no | yes, once stable |
 | Shareable | yes | hard | not suitable | yes, an open library |
 
-**"Why not write one Skill per app?"** That works at small scale. But apps keep changing: the same button is located differently in 4.1 and 4.2, and differently again in the Chinese and English UI. A hand-written Skill cannot tell which piece of experience applies to the current version or whether it is still right, and it cannot run without a model. Those three things are what MuscleMemory is for.
+**"Why not write one Skill per app?"** That works at small scale. But apps keep changing: the same button is located differently in two versions, and differently again in the Chinese and English UI. A hand-written Skill cannot tell which piece of experience applies to the current version or whether it is still right, and it cannot run without a model. Those three things are what MuscleMemory is for.
 
 ## Repository layout
 
@@ -248,14 +306,17 @@ The most valuable contributions, in order: **pitfalls (FAIL)**, **version varian
 - [x] Executor `kb run`, hand-off to the AI, navigation
 - [x] Flows, secrets, schedules (`kb flow tick`)
 - [x] Second version and second platform, demonstrated on the simulator (UI-language matching is covered by tests)
-- [ ] First real app end to end on Windows + cua-driver; verify the adapters on real devices
-- [ ] A seed library of verified cards
+- [ ] Verify the `cua-driver` and `adb` adapters on real devices
+- [ ] Sites inside a browser as first-class apps, and choosing cards per site (needed for the Workday example)
+- [ ] The first real card sets: a Workday application, an expense claim
 - [ ] External contributions: behaviour summaries for reviewers, reproduction workflow, signed releases, Gitee mirror
 - [ ] HarmonyOS (`hdc`) and iOS drivers; localised CLI messages; semantic retrieval when the library grows
 
 ## Acknowledgements
 
 MuscleMemory builds on the computer-use capabilities of [Cua](https://github.com/trycua/cua). It is an independent community project and is not affiliated with Cua.
+
+Workday, Expensify, Concur and SAP are trademarks of their respective owners, named here only to describe the tasks. This project is not affiliated with or endorsed by any of them.
 
 ## License
 

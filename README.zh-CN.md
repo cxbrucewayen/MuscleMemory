@@ -4,31 +4,116 @@
 
 [![CI](https://github.com/cxbrucewayen/MuscleMemory/actions/workflows/ci.yml/badge.svg)](https://github.com/cxbrucewayen/MuscleMemory/actions/workflows/ci.yml)
 
-> **给 AI 智能体的肌肉记忆。** 第一次靠 AI 摸索，之后由程序照着经验直接完成；只有界面变了，AI 才重新介入。
+**每个月的发票报销，教会 AI 一次就够了。**
 
-**项目状态：可用的基线版本（v0.1）。** `kb` 命令行、检查器、解析器、执行器、事务流程、密钥管理和 MCP 服务都已实现，并在内置的界面模拟器上通过测试。真实设备的驱动已有 Android（`adb`）和桌面（`cua-driver`，实验性）两种，但还没有在本仓库的 CI 里接真机跑过。公开的卡片库目前几乎是空的：经过验证的卡片要通过提案逐步进来。哪些做了、哪些没做，见 [docs/STATUS.md](./docs/STATUS.md)。
+MuscleMemory 是给 AI 智能体的肌肉记忆：第一次由 AI 摸索着把事情办成，并把做法留成一张张可以审核的小卡片；之后由程序照着卡片直接完成；只有界面变了，AI 才重新介入。
+
+> **项目状态：可用的基线版本（v0.1）。** 引擎已经做完并有测试：`kb` 命令行、检查器、执行器、事务流程、密钥管理、MCP 服务，都在内置的界面模拟器上跑通。**下面展示的报销卡片和 Workday 卡片目前还不在库里。** 它们说明这个项目是用来做什么的，也是我们最想和贡献者一起做出来的第一批卡片。真实设备的驱动（`adb`、`cua-driver`）已写好，但尚未验证。详见 [docs/STATUS.md](./docs/STATUS.md)。
 
 ---
 
-## 为什么需要它
+## 例一：发票报销
 
-让 AI 操作电脑和手机已经可行，但每一次都是从零开始：截图、理解界面、猜按钮、试错。
+**痛点。** 几乎每个上班族每个月都要做一遍：翻邮箱找发票、下载 PDF、打开公司 OA、上传、选项目、填类目、提交。OA 通常不开放接口，只能一下一下地点，又多又碎。
 
-- **慢、贵**：同一件事，第一百次和第一次一样费时、一样耗 token。
-- **不稳定**：今天点对了，明天软件一更新就点错。
-- **不积累**：踩过的坑下次还会再踩，你踩过的坑别人也要再踩一遍。
+**只靠 AI 为什么不够。** AI 能替你点，但每次都从头学一遍这套 OA：截图、猜按钮、试错。慢、贵，而且每次错的地方还不一样。
 
-传统的 RPA 脚本跑得快，但靠人录制和维护，界面一变就坏。
+**用 MuscleMemory：**
 
-**MuscleMemory 把两者结合起来：AI 负责探索和修复，经验负责复用和执行。**
+- **一个流程跨两个软件。** 邮箱客户端把发票存下来，OA 接着用这个文件，中间不用你倒手。
+- **密码只存在本机。** 由执行器代为输入，AI 拿不到明文，日志里只显示 `***`。
+- **提交前停下来让你核对。** 流程在提交前有一个人工检查点；“提交”这一步本身带 `!`，永远需要你点头。
+- **OA 改版后不用你重新教。** 程序找不到按钮就停下，把现场交给 AI；AI 办完这一次，并提交修复，审核通过后又能由程序直接运行。
+
+你自己这一侧，只在本机（`flows/expense-claim.flow.yaml`）：
+
+```yaml
+format: 6
+id: FLOW.EXPENSE_CLAIM
+aliases:
+  zh: [发票报销, 报销]
+  en: [expense claim]
+trigger: [manual]
+workdir: <你的报销文件夹>
+inputs:
+  subject: <发票邮件的主题关键词>
+  user: <OA 用户名>
+  password: "{secret:OA_PASSWORD}"            # 用 kb secret set 存在本机，AI 看不到
+  project: <项目名称>
+  category: 差旅费
+secrets: [OA_PASSWORD]
+steps:
+  - call RCP.COMMON.MAIL.SAVE_INVOICE subject={subject} save_as={run_dir}/invoice.pdf -> {invoice}
+  - wait_file {invoice} 30s
+  - call RCP.COMMON.OA.LOGIN user={user} password={password}
+  - call RCP.COMMON.OA.FILL_CLAIM invoice={invoice} project={project} category={category}
+  - confirm "报销单已填好。请在 OA 里核对金额、项目和类目。确认提交吗？"
+  - call RCP.COMMON.OA.SUBMIT_CLAIM
+check:
+  - step 6 succeeded
+state: observed
+verified: {count: 0, last: 2026-11-13}
+```
+
+软件这一侧是卡片，不含任何个人信息（示意，编号是虚构的）：
+
+```yaml
+id: RCP.WIN.OA.SUBMIT_CLAIM
+applies:
+  os: WIN >=10.0
+  app: OA >=8.0
+requires:
+  - ELEM.WIN.OA.CLAIM_FORM visible
+steps:
+  - click! ELEM.WIN.OA.SUBMIT_BUTTON           # ! 表示会产生外部影响，执行前必须经你授权
+  - wait ELEM.WIN.OA.SUBMITTED_NOTICE shown 15s
+check:
+  - ELEM.WIN.OA.SUBMITTED_NOTICE visible
+ends_at: ELEM.WIN.OA.SUBMITTED_NOTICE
+---
+id: ELEM.WIN.OA.SUBMIT_BUTTON@9
+applies:
+  os: WIN >=10.0
+  app: OA >=9.0
+  lang: zh-CN
+locators:                                      # OA 9 改版后按钮变了：只记录变化的部分
+  - ax role=Button name="提交审批"
+  - text "提交审批" self
+evidence: on 9.0 the old button id is gone; the Button named by its label worked first try
+```
+
+**局限。** 每家公司的 OA 都不一样，这类卡片多数只适合在团队内部共享，很难放进公开库。这一点今天就能做到：经验库就是一个带 `cards/` 目录的 git 仓库，把 `KB_ROOT` 指向你们团队自己的仓库即可。一个同事修好，全组受益。
+
+## 例二：在 Workday 上投简历
+
+**痛点。** 在海外求职，这是公认的折磨：简历上传了，还得把姓名、电话、每段工作经历、每段教育经历重新填一遍；换一家公司，再来一遍。每家公司都有自己的 Workday 站点和账号，表单几乎一样，又总有一点不同。
+
+**为什么它最适合开源共享。** 表单的结构不含个人信息：卡片只记录“电话”那一栏在哪里、怎么确认这一页存上了。你的简历内容只在你本机的流程文件里。所以“一个人修好，所有人受益”在这里最说得通。
+
+**各家表单的小差异怎么处理。** 一个栏位可以保存多种定位方式，按顺序尝试；只有部分公司才有的栏位，用 `if … visible` 包起来。遇到卡片对付不了的表单，AI 办完这一次投递，并提交修复。
+
+**这个例子还差什么。** 有两件事目前还没有建模：把浏览器里的一个网站当作一等的“软件”，以及**按公司**挑选卡片。现在的变体卡是按软件版本、界面语言、厂商系统来选的。在加上“站点”这个维度之前，各家公司的差异靠多候选定位和 `if` 条件来处理，而不是每家公司一张变体卡。
+
+流程和卡片的写法见[英文版 README](./README.md#the-example-applying-for-jobs-on-workday)。
+
+## 其他适合的场景
+
+- 电商在淘宝、拼多多、抖店等多个平台同步上架同一件商品
+- 把工作日志填进钉钉或飞书的日报
+- Expensify、Concur 这类报销工具
+- 把数据录进 SAP GUI 之类的老旧企业软件
+
+共同点是：界面没有可用的接口，每次步骤都一样，不同版本或不同站点之间只有小差异。
+
+---
+
+## 它是怎么工作的
 
 ```
 第一次：AI 看屏幕、摸索、完成任务   ──►  提炼成经验卡片
 之后：  按当前环境查出卡片          ──►  程序直接运行（快、零 token）
 坏了：  软件改版、定位失败          ──►  交给 AI 修复 ──► 提交新的经验 ──► 又能直接运行
 ```
-
-## 它是什么
 
 | | 比喻 | 解决的问题 |
 |---|---|---|
@@ -46,13 +131,13 @@
 - **失效能自愈**：每个元素保存多种定位方式和一句“作用”描述。全部定位失败时，执行器把结构化的交接包交给 AI；AI 完成任务后提交一个变体。
 - **快速检索**：先按环境把范围缩小到几个文件，再从任务、报错、界面三个入口之一定位。相关卡片打包返回，体积可控。
 - **界面导航**：没有副作用的配方构成界面之间的导航图，执行前自动走到需要的界面。
-- **事务流程**：把多个软件串成一件事，例如“任务清单 → 汇总 → 发给老板 → 回填清单”。支持数据传递、断点恢复和定时运行。
+- **事务流程**：把多个软件串成一件事。支持数据传递、断点恢复和定时运行。
 - **安全优先**：语法本身就是白名单，根本写不出“执行命令”“打开网址”。外部经验先进隔离区，有人复现后才能入库。无人值守只执行你亲自批准过的那一版。密码永远只流向输入框。
-- **面向全球，完整支持中文**：仓库统一存英文规范形式；所有字段名、动词、关键字都有中文别名，检索时各语言的别名都参与匹配。
+- **面向全球，完整支持中文**：仓库统一存英文规范形式；所有字段名、动词、关键字都有中文别名（`点击! ELEM...`、`步骤:`、`状态: 稳定`），两种写法完全等价，检索时各语言的别名都参与匹配。
 
-## 两分钟上手
+## 两分钟试一下引擎
 
-不需要任何设备：演示库在一个模拟的聊天软件上运行。
+不需要任何设备。上面的报销卡片和 Workday 卡片还没有写出来，所以可以直接运行的演示用的是一个模拟的聊天软件。它走的是同一套机制：配方、`!` 确认、版本变体、交接给 AI、事务流程。
 
 ```bash
 git clone https://github.com/cxbrucewayen/MuscleMemory && cd MuscleMemory
@@ -104,38 +189,6 @@ kb outline                                             # 范围内每张卡一�
 cp -r examples/demo /tmp/mm-demo
 kb --root /tmp/mm-demo --driver sim:/tmp/mm-demo/sim/windows-4.1.yaml flow run FLOW.WEEKLY_REPORT
 ```
-
-## 一张卡片
-
-经验以卡片的形式保存，格式是标准 YAML：
-
-```yaml
-id: RCP.WIN.DEMOCHAT.RENAME_REMARK        # 类型.平台.软件.名称
-applies:
-  os: WIN >=10.0
-  app: DEMOCHAT >=4.0
-steps:
-  - call RCP.WIN.DEMOCHAT.OPEN_PROFILE contact={contact}
-  - click ELEM.WIN.DEMOCHAT.REMARK_ROW
-  - wait ELEM.WIN.DEMOCHAT.REMARK_EDIT shown 5s
-  - key Ctrl+A
-  - call RCP.COMMON.INPUT_TEXT text={remark}
-  - key! Enter                            # ! 表示会产生外部影响，执行前需要授权
-check:
-  - ELEM.WIN.DEMOCHAT.PROFILE_REMARK value == {remark}
-ends_at: ELEM.WIN.DEMOCHAT.PROFILE_CARD
-state: stable
-```
-
-同一句“改备注”，在不同环境下得到不同的做法：
-
-| 当前环境 | 使用的经验 |
-|---|---|
-| Windows + DemoChat 4.1 | Windows 配方 + 备注行的基础定位 |
-| Windows + DemoChat 4.2 | Windows 配方 + 备注行的 `@4.2` 变体 |
-| Android + DemoChat 5.0 | 还没有配方 → AI 探索，完成后贡献 `RCP.ANDROID.DEMOCHAT.RENAME_REMARK` |
-
-卡片也可以全用中文写（`点击! ELEM...`、`步骤:`、`状态: 稳定`），两种写法完全等价，`kb fmt` 会统一转成规范形式。
 
 ## 接真实设备
 
@@ -198,7 +251,7 @@ kb --driver cua env            # 桌面软件：通过 cua-driver（实验性适
 | 能否脱离大模型执行 | 不能 | 能 | 不能 | 稳定后能 |
 | 能否共享 | 能 | 难 | 不适合 | 能，开源经验库 |
 
-**“给每个软件写一个 Skill 不就行了？”** 规模小时可以。但软件一直在更新：同一个按钮在 4.1 和 4.2 里定位方式不同，中文界面和英文界面也不同。手写的 Skill 无法判断哪条经验适用于当前版本、还对不对，也不能脱离大模型直接执行。MuscleMemory 解决的正是这三件事。
+**“给每个软件写一个 Skill 不就行了？”** 规模小时可以。但软件一直在更新：同一个按钮在两个版本里定位方式不同，中文界面和英文界面也不同。手写的 Skill 无法判断哪条经验适用于当前版本、还对不对，也不能脱离大模型直接执行。MuscleMemory 解决的正是这三件事。
 
 ## 仓库结构
 
@@ -248,14 +301,17 @@ kb --driver cua env            # 桌面软件：通过 cua-driver（实验性适
 - [x] 执行器 `kb run`、交接给 AI、界面导航
 - [x] 事务流程、密钥管理、定时运行（`kb flow tick`）
 - [x] 第二个版本、第二个系统，已在模拟器上演示（界面语言匹配由测试覆盖）
-- [ ] 第一个真实软件的完整经验：Windows + cua-driver；在真机上验证各驱动
-- [ ] 一批经过验证的种子卡片
+- [ ] 在真机上验证 `cua-driver` 和 `adb` 两个驱动
+- [ ] 把浏览器里的网站当作一等的软件，并支持按站点挑选卡片（Workday 这个例子需要）
+- [ ] 第一批真实的卡片：一套报销、一套 Workday 投递
 - [ ] 开放外部贡献：给审核者的行为摘要、独立复现流程、签名发布、Gitee 镜像
 - [ ] 鸿蒙（`hdc`）与 iOS 驱动；命令行提示的中文化；卡片多了以后加语义检索
 
 ## 致谢
 
 本项目基于 [Cua](https://github.com/trycua/cua) 的计算机使用能力构建，是独立的社区项目，与 Cua 官方无隶属关系。
+
+文中提到的 Workday、Expensify、Concur、SAP、淘宝、拼多多、抖店、钉钉、飞书均为各自所有者的商标，这里只用来描述任务。本项目与它们没有隶属或合作关系。
 
 ## 许可证
 

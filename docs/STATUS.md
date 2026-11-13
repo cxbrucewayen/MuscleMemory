@@ -51,6 +51,7 @@ The test suite (`tests/`) runs the whole pipeline on the simulator, including th
 ### Not implemented
 
 - The "looks like a personal name" privacy rule, per-contributor rate limits, the reviewer behaviour summary, signed releases and the Gitee mirror (gate 2 and 3 of SECURITY)
+- **Sites inside a browser as first-class apps, and choosing cards per site.** `applies` selects by OS, app version, driver, UI language, display and vendor ROM. There is no "site" or "tenant" dimension, so the README's Workday example cannot yet have one variant per company; differences between sites are handled by ordered locators and `if … visible` guards. Adding the dimension is a change to the card format in `DESIGN.md`
 - HarmonyOS (`hdc`) and iOS drivers; `vision` locators for programs (by design they are AI-only)
 - Semantic retrieval; localised CLI messages (card content and field names are bilingual, CLI messages are English)
 - Monthly maintenance automation (promotion, pruning) and `kb migrate` rules (there is only format 6)
@@ -104,6 +105,7 @@ The test suite (`tests/`) runs the whole pipeline on the simulator, including th
 ### 未实现
 
 - “疑似人名”的隐私规则、新贡献者限流、给审核者的行为摘要、签名发布、Gitee 镜像（SECURITY 的闸二、闸三）
+- **把浏览器里的网站当作一等的软件，以及按站点挑选卡片。** `applies` 按系统、软件版本、驱动、界面语言、显示、厂商系统来选卡，没有“站点”或“租户”这个维度，所以 README 里的 Workday 例子目前做不到每家公司一张变体卡；站点之间的差异靠多候选定位和 `if … visible` 条件处理。加这个维度需要改 `DESIGN.md` 里的卡片格式
 - 鸿蒙（`hdc`）与 iOS 驱动；程序可用的 `vision` 定位（按设计它只给 AI 用）
 - 语义检索；命令行提示的中文化（卡片内容和字段名是双语的，命令行提示目前只有英文）
 - 每月维护的自动化（升级、清理）和 `kb migrate` 的迁移规则（目前只有格式 6）

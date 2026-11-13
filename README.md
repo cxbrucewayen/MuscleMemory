@@ -6,7 +6,23 @@
 
 **MuscleMemory is muscle memory for AI agents.** The first time, the AI works out how to get through a form or an app. It leaves that experience behind as a small, reviewable card. After that a program replays the card, and the AI only steps back in when the screen has changed.
 
-> **Status: working baseline (v0.1).** The engine is built and tested: the `kb` command line, the checker, the executor, flows, secrets and an MCP server, all exercised against a built-in UI simulator. **The Workday and expense cards shown below do not exist in the library yet.** They show what the project is for, and they are the first cards we want to build with contributors. Real-device drivers (`adb`, `cua-driver`) are written but unverified. Details: [docs/STATUS.md](./docs/STATUS.md).
+> **Status: working baseline (v0.1).** The engine is built and tested: the `kb` command line, the checker, the executor, flows, secrets and an MCP server, all exercised against a built-in UI simulator. **The Workday and expense cards shown below do not exist in the library yet.** They show what the project is for, and they are the first cards we want to build with contributors. Real-device drivers (`adb`, `cua-driver`) are written but unverified. Details: [implementation status](./docs/en/STATUS.md).
+
+## Install
+
+One line installs the `kb` command, the agent skill and the MCP server:
+
+```bash
+pip install git+https://github.com/cxbrucewayen/MuscleMemory && kb setup
+```
+
+`kb setup` does three things and lists every file it touches:
+
+1. **Card library.** Uses the library you are in, or clones this repository to `~/.cua-experience/library`.
+2. **Skill.** Copies the `cua-experience` skill to `~/.claude/skills/`, in English or Chinese to match your system language (`--lang en` / `--lang zh-CN` to choose).
+3. **MCP server.** Registers `musclememory` with the agent clients it finds: Claude Code, Cursor and Claude Desktop. For any other MCP client it prints the configuration block to paste.
+
+Then pick how it reaches your apps, once: `kb setup --driver adb` (Android) or `kb setup --driver cua` (desktop, experimental). `kb setup --dry-run` shows what would change, and `kb setup --uninstall` removes the skill and the MCP registration again.
 
 ---
 
@@ -146,7 +162,7 @@ No device needed. The Workday and expense cards above are not written yet, so th
 
 ```bash
 git clone https://github.com/cxbrucewayen/MuscleMemory && cd MuscleMemory
-pip install -e .
+pip install -e .          # skip both lines if you ran `kb setup`: cd ~/.cua-experience/library
 
 export KB_ROOT=examples/demo
 export KB_DRIVER=sim:examples/demo/sim/windows-4.1.yaml     # a simulated "DemoChat 4.1" on Windows
@@ -213,20 +229,9 @@ Set a default in `~/.cua-experience/config.yaml` (`driver: adb`, `lang: zh-CN`, 
 
 ## Use it from an AI agent
 
-Register the MCP server with your agent, for example:
+`kb setup` (see [Install](#install)) is all it takes. After a restart the agent has the `cua-experience` skill and these MCP tools: `kb_bundle`, `kb_symptom`, `kb_screen`, `kb_outline`, `kb_resolve`, `kb_goto`, `kb_run`, `kb_lock`, `kb_unlock`, `kb_type_secret`, `kb_propose` and `kb_flow`.
 
-```json
-{
-  "mcpServers": {
-    "musclememory": {
-      "command": "kb",
-      "args": ["--root", "/path/to/MuscleMemory", "--driver", "adb", "mcp"]
-    }
-  }
-}
-```
-
-and give the agent [`SKILL.md`](./SKILL.md) ([English](./docs/en/SKILL.md)). The tools are `kb_bundle`, `kb_symptom`, `kb_screen`, `kb_outline`, `kb_resolve`, `kb_goto`, `kb_run`, `kb_lock`, `kb_unlock`, `kb_type_secret`, `kb_propose` and `kb_flow`.
+To wire it up by hand instead, start the server with `kb --root <library> mcp` over stdio and give the agent the skill: [English](./src/musclememory/skill/SKILL.md), [中文](./src/musclememory/skill/SKILL.zh-CN.md).
 
 Steps marked `!` are confirmed by the user through MCP elicitation when the client supports it. Otherwise `kb_run` performs nothing, returns the list of `!` steps with a one-time token, and the agent has to ask the user before calling again.
 
@@ -241,6 +246,7 @@ Steps marked `!` are confirmed by the user through MCP elicitation when the clie
 | `kb propose [file]` / `merge <proposal>` | submit experience / maintainers apply a reviewed proposal |
 | `kb secret set\|list\|rm\|check` | secrets, stored outside the repository |
 | `kb flow run\|resume\|approve\|list\|tick` | flows; `tick` runs due schedules (call it from cron or Task Scheduler) |
+| `kb setup` | install the skill and register the MCP server (`--uninstall` to undo) |
 | `kb env` / `kb mcp` | print the environment snapshot / serve MCP over stdio |
 
 `--root`, `--driver`, `--env` and `--lang` work on every command; `KB_ROOT`, `KB_DRIVER` and `KB_LANG` set defaults.
@@ -261,13 +267,12 @@ Steps marked `!` are confirmed by the user through MCP elicitation when the clie
 ## Repository layout
 
 ```
-├── README.md  README.zh-CN.md
-├── DESIGN.md          # the specification (Chinese): cards, grammar, resolution, retrieval, execution, flows
-├── SECURITY.md        # the security design (Chinese): poisoning, injection, leaks, unattended hijacking
-├── SKILL.md           # the skill for AI agents (Chinese)
-├── docs/en/           # English translations of the three documents above
-├── docs/STATUS.md     # what this baseline implements, where it deviates, what is missing
+├── README.md  README.zh-CN.md  LICENSE
+├── docs/
+│   ├── en/            # DESIGN.md (the specification), SECURITY.md (security design), STATUS.md
+│   └── zh-CN/         # the same three documents in Chinese
 ├── src/musclememory/  # the implementation (Python, one dependency: PyYAML)
+│   └── skill/         # the agent skill and its reference sheet, in English and Chinese
 ├── cards/             # the public card library (platform/app.yaml)
 ├── index/             # generated retrieval index
 ├── examples/demo/     # a complete demo library, simulated apps and flows
@@ -276,7 +281,16 @@ Steps marked `!` are confirmed by the user through MCP elicitation when the clie
 ├── flows/  runs/      # local only, git-ignored: your flows, run records, locks
 ```
 
-Where to start: this file if you are curious, `DESIGN.md` then `SECURITY.md` if you want to work on the engine, the "Contributing experience" section below if you want to add cards, `SKILL.md` if you are an AI agent.
+Where to start:
+
+| You want to | Read |
+|---|---|
+| understand the project | this file |
+| work on the engine | [design](./docs/en/DESIGN.md), then [security design](./docs/en/SECURITY.md) and [status](./docs/en/STATUS.md) |
+| contribute cards | "Contributing experience" below, then the [reference sheet](./src/musclememory/skill/REFERENCE.md) |
+| know what an agent is told | the [skill](./src/musclememory/skill/SKILL.md) |
+
+Every document exists in English and Chinese and the two are maintained together.
 
 ## Security
 
@@ -288,11 +302,11 @@ An open experience library is a **supply chain that AIs and programs execute**, 
 - **Personal data stays on your machine.** Flows, run records, screenshots and secrets are local; personal data is rejected from the public library.
 - **Passwords only flow into input fields.** The AI never sees them; logs and hand-off packages show `***`.
 
-Full design: [`SECURITY.md`](./SECURITY.md) ([English](./docs/en/SECURITY.md)). Please report vulnerabilities privately through GitHub's "Report a vulnerability" on this repository instead of opening a public issue.
+Full design: [security design](./docs/en/SECURITY.md). To report a vulnerability, follow the [security policy](./.github/SECURITY.md): report it privately, not in a public issue.
 
 ## Contributing experience
 
-1. Let your agent call `kb_propose` when a task is done, or write a proposal by hand following `DESIGN.md`. Chinese or English are both fine.
+1. Let your agent call `kb_propose` when a task is done, or write a proposal by hand following the [reference sheet](./src/musclememory/skill/REFERENCE.md). Chinese or English are both fine.
 2. Run `kb fmt && kb check`; open a pull request once both pass.
 3. Evidence describes structure only (controls, error codes, symptoms). **No names, chat content, local paths or passwords**; use placeholders such as `<CONTACT_A>` and `<USER_HOME>`.
 4. A maintainer reproduces the card in the declared version and UI language. It is merged as `observed` and promoted as more people reproduce it.

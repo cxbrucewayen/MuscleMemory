@@ -22,6 +22,7 @@ What the v0.1 baseline implements, where it deviates from the [design](./DESIGN.
 | Proposals | `propose.py` | `kb_propose` as the only write path, `kb merge` for maintainers |
 | Flows | `flows.py` | 7 verbs, csv/xlsx tables with backup, checkpoints, resume, `authorize`, lock hash, schedules via `kb flow tick` |
 | MCP server | `mcp_server.py` | stdio, no SDK dependency, 12 tools, elicitation for `!` steps |
+| Installer | `install.py`, `skill/` | `kb setup` installs the skill (English or Chinese) and registers the MCP server with Claude Code, Cursor and Claude Desktop; checked against the real Claude Code CLI, the other two by their config files only |
 
 The test suite (`tests/`) runs the whole pipeline on the simulator, including the negative cases: forged confirmation tokens, tampered cards under an approved flow, secrets in logs, recipients outside `authorize`.
 
@@ -44,7 +45,8 @@ The test suite (`tests/`) runs the whole pipeline on the simulator, including th
 9. **`!` over MCP.** With elicitation the server asks the user at each `!` step. Without it, `kb_run` / `kb_flow` return the `!` steps and a one-time token bound to the exact call. This relies on the agent asking the user, as rule 8 of the skill requires.
 10. **Proposal limit.** "At most 3 per task" is counted per MCP session and reset by `kb_bundle`.
 11. **`kb fmt` drops YAML comments.** Comments are not part of the data model and agents never read raw files.
-12. **Local statistics** are written to `runs/stats.json`; the weekly roll-up into an `update` proposal is not implemented.
+12. **Repository layout.** The specification's tree shows `DESIGN.md`, `SKILL.md` and `SECURITY.md` at the root. Here the documents live under `docs/<language>/`, and the skill ships inside the Python package (`src/musclememory/skill/`) so that `kb setup` can install it; it comes with a short `REFERENCE.md` instead of pointing the agent at the full specification.
+13. **Local statistics** are written to `runs/stats.json`; the weekly roll-up into an `update` proposal is not implemented.
 
 ## Not implemented
 

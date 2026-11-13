@@ -8,7 +8,25 @@
 
 MuscleMemory 是给 AI 智能体的肌肉记忆：第一次由 AI 摸索着把事情办成，并把做法留成一张张可以审核的小卡片；之后由程序照着卡片直接完成；只有界面变了，AI 才重新介入。
 
-> **项目状态：可用的基线版本（v0.1）。** 引擎已经做完并有测试：`kb` 命令行、检查器、执行器、事务流程、密钥管理、MCP 服务，都在内置的界面模拟器上跑通。**下面展示的报销卡片和 Workday 卡片目前还不在库里。** 它们说明这个项目是用来做什么的，也是我们最想和贡献者一起做出来的第一批卡片。真实设备的驱动（`adb`、`cua-driver`）已写好，但尚未验证。详见 [docs/STATUS.md](./docs/STATUS.md)。
+> **项目状态：可用的基线版本（v0.1）。** 引擎已经做完并有测试：`kb` 命令行、检查器、执行器、事务流程、密钥管理、MCP 服务，都在内置的界面模拟器上跑通。**下面展示的报销卡片和 Workday 卡片目前还不在库里。** 它们说明这个项目是用来做什么的，也是我们最想和贡献者一起做出来的第一批卡片。真实设备的驱动（`adb`、`cua-driver`）已写好，但尚未验证。详见[实现状态](./docs/zh-CN/STATUS.md)。
+
+## 一键安装
+
+一行命令装好 `kb` 命令行、智能体技能和 MCP 服务：
+
+```bash
+pip install git+https://github.com/cxbrucewayen/MuscleMemory && kb setup
+```
+
+`kb setup` 只做三件事，改动了哪些文件都会逐条列出：
+
+1. **经验库。** 你当前就在某个经验库里，就用它；否则把本仓库克隆到 `~/.cua-experience/library`。
+2. **技能。** 把 `cua-experience` 技能复制到 `~/.claude/skills/`。系统语言是中文就装中文版，否则装英文版（也可以用 `--lang zh-CN` / `--lang en` 指定）。
+3. **MCP 服务。** 在检测到的智能体客户端里注册 `musclememory`：Claude Code、Cursor、Claude Desktop。其他支持 MCP 的客户端，它会打印一段配置，粘贴进去即可。
+
+接着选一次驱动，告诉它怎么操作你的软件：`kb setup --driver adb`（Android）或 `kb setup --driver cua`（桌面，实验性）。`kb setup --dry-run` 只预览不改动，`kb setup --uninstall` 可以把技能和 MCP 注册再移除。
+
+访问 GitHub 不稳定时，可以先把仓库下载到本地，在仓库目录里运行 `pip install . && kb setup`，这样不需要再联网克隆。
 
 ---
 
@@ -141,7 +159,7 @@ evidence: on 9.0 the old button id is gone; the Button named by its label worked
 
 ```bash
 git clone https://github.com/cxbrucewayen/MuscleMemory && cd MuscleMemory
-pip install -e .
+pip install -e .          # 已经运行过 kb setup 的话，这两行换成：cd ~/.cua-experience/library
 
 export KB_ROOT=examples/demo
 export KB_DRIVER=sim:examples/demo/sim/windows-4.1.yaml     # 模拟的 Windows 版“DemoChat 4.1”
@@ -208,20 +226,9 @@ kb --driver cua env            # 桌面软件：通过 cua-driver（实验性适
 
 ## 给 AI 智能体用
 
-把 MCP 服务注册到你的智能体，例如：
+运行 `kb setup`（见[一键安装](#一键安装)）就够了。重启客户端后，智能体就有了 `cua-experience` 技能和这些 MCP 工具：`kb_bundle`、`kb_symptom`、`kb_screen`、`kb_outline`、`kb_resolve`、`kb_goto`、`kb_run`、`kb_lock`、`kb_unlock`、`kb_type_secret`、`kb_propose`、`kb_flow`。
 
-```json
-{
-  "mcpServers": {
-    "musclememory": {
-      "command": "kb",
-      "args": ["--root", "/path/to/MuscleMemory", "--driver", "adb", "mcp"]
-    }
-  }
-}
-```
-
-再把 [`SKILL.md`](./SKILL.md)（[英文版](./docs/en/SKILL.md)）交给它。工具有：`kb_bundle`、`kb_symptom`、`kb_screen`、`kb_outline`、`kb_resolve`、`kb_goto`、`kb_run`、`kb_lock`、`kb_unlock`、`kb_type_secret`、`kb_propose`、`kb_flow`。
+想手动接入也可以：用 `kb --root <经验库> mcp` 以 stdio 方式启动服务，再把技能文件交给智能体：[中文](./src/musclememory/skill/SKILL.zh-CN.md)、[English](./src/musclememory/skill/SKILL.md)。
 
 带 `!` 的步骤：客户端支持 MCP elicitation 时，由服务直接向用户确认；不支持时，`kb_run` 什么都不执行，只返回 `!` 步骤清单和一个一次性令牌，智能体必须先问过用户才能带着令牌再调用。
 
@@ -236,6 +243,7 @@ kb --driver cua env            # 桌面软件：通过 cua-driver（实验性适
 | `kb propose [文件]` / `merge <提案>` | 提交经验 / 维护者把审核通过的提案并入卡片库 |
 | `kb secret set\|list\|rm\|check` | 密钥，存放在仓库之外 |
 | `kb flow run\|resume\|approve\|list\|tick` | 事务流程；`tick` 运行到点的定时任务（交给 cron 或任务计划程序定期调用） |
+| `kb setup` | 安装技能并注册 MCP 服务（`--uninstall` 撤销） |
 | `kb env` / `kb mcp` | 打印环境快照 / 以 stdio 方式提供 MCP 服务 |
 
 `--root`、`--driver`、`--env`、`--lang` 对所有命令有效；`KB_ROOT`、`KB_DRIVER`、`KB_LANG` 可设默认值。
@@ -256,13 +264,12 @@ kb --driver cua env            # 桌面软件：通过 cua-driver（实验性适
 ## 仓库结构
 
 ```
-├── README.md  README.zh-CN.md
-├── DESIGN.md          # 设计规格：卡片格式、步骤语法、解析、检索、执行、事务流程
-├── SECURITY.md        # 安全设计：投毒、注入、泄露、无人值守劫持的防御
-├── SKILL.md           # 给 AI 智能体的技能
-├── docs/en/           # 以上三份文档的英文翻译
-├── docs/STATUS.md     # 这个基线实现了什么、与设计有哪些出入、还缺什么
+├── README.md  README.zh-CN.md  LICENSE
+├── docs/
+│   ├── zh-CN/         # DESIGN.md（设计规格）、SECURITY.md（安全设计）、STATUS.md（实现状态）
+│   └── en/            # 同样三份文档的英文版
 ├── src/musclememory/  # 实现（Python，只依赖 PyYAML）
+│   └── skill/         # 给智能体的技能和语法速查，中英文各一份
 ├── cards/             # 公开的卡片库（平台/软件.yaml）
 ├── index/             # 工具生成的检索索引
 ├── examples/demo/     # 完整的演示库：卡片、模拟软件、事务流程
@@ -271,7 +278,16 @@ kb --driver cua env            # 桌面软件：通过 cua-driver（实验性适
 ├── flows/  runs/      # 只在本地、已加入 .gitignore：你的流程、运行记录、锁
 ```
 
-从哪里读起：想了解项目读本文件；想参与开发先读 `DESIGN.md` 再读 `SECURITY.md`；想贡献经验看下面的“贡献经验”；AI 智能体读 `SKILL.md`。
+从哪里读起：
+
+| 你想 | 读 |
+|---|---|
+| 了解项目 | 本文件 |
+| 参与开发 | [设计规格](./docs/zh-CN/DESIGN.md)，然后是[安全设计](./docs/zh-CN/SECURITY.md)和[实现状态](./docs/zh-CN/STATUS.md) |
+| 贡献卡片 | 下面的“贡献经验”，然后是[语法速查](./src/musclememory/skill/REFERENCE.zh-CN.md) |
+| 知道智能体被告知了什么 | [技能文件](./src/musclememory/skill/SKILL.zh-CN.md) |
+
+所有文档都有中文和英文两个版本，同步维护。
 
 ## 安全
 
@@ -283,11 +299,11 @@ kb --driver cua env            # 桌面软件：通过 cua-driver（实验性适
 - **个人信息不出本机。** 流程、运行记录、截图、密钥都只留在你的电脑上；公开库拒收个人信息。
 - **密码永远只流向输入框。** AI 拿不到明文，日志和交接包里一律显示为 `***`。
 
-完整设计见 [`SECURITY.md`](./SECURITY.md)。发现安全问题，请通过本仓库的 GitHub“Report a vulnerability”私下报告，不要公开提交 issue。
+完整设计见[安全设计](./docs/zh-CN/SECURITY.md)。发现安全问题，请按[安全策略](./.github/SECURITY.md)私下报告，不要公开提交 issue。
 
 ## 贡献经验
 
-1. 让你的智能体在任务结束后调用 `kb_propose`，或者照 `DESIGN.md` 的格式手写提案。中文、英文都可以。
+1. 让你的智能体在任务结束后调用 `kb_propose`，或者照[语法速查](./src/musclememory/skill/REFERENCE.zh-CN.md)手写提案。中文、英文都可以。
 2. 运行 `kb fmt && kb check`，全部通过后再提交 PR。
 3. 证据里只写结构（控件、报错码、现象），**不写人名、聊天内容、本机路径、密码**，用 `<CONTACT_A>`、`<USER_HOME>` 这类占位符代替。
 4. 维护者会在声明的版本和界面语言环境里独立复现。通过后以“观察”状态合并，之后随着更多人复现逐步升级。

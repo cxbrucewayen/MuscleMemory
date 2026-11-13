@@ -384,3 +384,123 @@ def test_cli_smoke(demo, capsys):
 
 def test_secret_handle_is_not_a_string():
     assert not isinstance(Secret("X", None), str)
+
+
+# ------------------------------------------------------------------------ kb setup
+
+def _fake_home(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    home.mkdir()
+    for var in ("HOME", "USERPROFILE"):
+        monkeypatch.setenv(var, str(home))
+    monkeypatch.setenv("APPDATA", str(home / "AppData" / "Roaming"))
+    monkeypatch.setenv("CUA_EXPERIENCE_HOME", str(home / ".cua-experience"))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    monkeypatch.delenv("KB_ROOT", raising=False)
+    monkeypatch.delenv("KB_LANG", raising=False)
+    return home
+
+
+def test_setup_installs_skill_and_registers_mcp(demo, tmp_path, monkeypatch):
+    from musclememory.install import SERVER_NAME, Setup, claude_desktop_config, cursor_config
+
+    home = _fake_home(tmp_path, monkeypatch)
+    cursor_config().parent.mkdir(parents=True)
+    cursor_config().write_text('{"mcpServers": {"other": {"command": "x"}}, "keep": 1}', encoding="utf-8")
+    calls = []
+
+    def fake_run(argv, **kw):
+        calls.append(argv)
+        return type("P", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    monkeypatch.setattr("musclememory.install.shutil.which", lambda name: f"/bin/{name}")
+    lines = Setup(lang="zh-CN", root=demo, driver="adb", clients=["claude-code", "cursor", "claude-desktop"],
+                  run=fake_run).install()
+
+    skill = home / ".claude" / "skills" / "cua-experience"
+    assert sorted(p.name for p in skill.iterdir()) == ["REFERENCE.md", "SKILL.md"]
+    assert "何时用" in (skill / "SKILL.md").read_text(encoding="utf-8")            # the Chinese skill
+    assert "卡片与流程速查" in (skill / "REFERENCE.md").read_text(encoding="utf-8")
+    add = calls[-1]
+    assert add[1:6] == ["mcp", "add", "--scope", "user", SERVER_NAME] and add[-1] == "mcp" and str(demo) in add
+    cur = json.loads(cursor_config().read_text(encoding="utf-8"))
+    assert cur["keep"] == 1 and "other" in cur["mcpServers"]                      # existing entries survive
+    assert cur["mcpServers"][SERVER_NAME]["args"][-1] == "mcp"
+    assert cursor_config().with_suffix(".json.bak").is_file()
+    assert SERVER_NAME in json.loads(claude_desktop_config().read_text(encoding="utf-8"))["mcpServers"]
+    from musclememory.cards import find_root, load_config
+    assert load_config() == {"driver": "adb", "lang": "zh-CN", "root": str(demo)}
+    monkeypatch.chdir(tmp_path)
+    assert find_root() == demo                                                     # kb now finds the library anywhere
+    assert any("已安装" in line for line in lines)
+
+    lines = Setup(clients=["claude-code", "cursor", "claude-desktop"], run=fake_run).uninstall()
+    assert not skill.exists()
+    assert SERVER_NAME not in json.loads(cursor_config().read_text(encoding="utf-8"))["mcpServers"]
+    assert calls[-1][1:3] == ["mcp", "remove"]
+
+
+def test_setup_english_default_dry_run_and_fresh_library(tmp_path, monkeypatch):
+    from musclememory.install import Setup
+
+    home = _fake_home(tmp_path, monkeypatch)
+    monkeypatch.setenv("LANG", "en_US.UTF-8")
+    monkeypatch.delenv("LC_ALL", raising=False)
+    monkeypatch.chdir(tmp_path)
+    Setup(clients=[], dry_run=True).install()
+    assert not (home / ".claude").exists() and not (home / ".cua-experience").exists()   # a dry run changes nothing
+
+    lines = Setup(clients=[], clone=False).install()
+    assert (home / ".cua-experience" / "library" / "cards").is_dir()                # no library anywhere: one is created
+    skill = home / ".claude" / "skills" / "cua-experience" / "SKILL.md"
+    assert "When to use it" in skill.read_text(encoding="utf-8")                     # English by default
+    assert any('"mcpServers"' in line for line in lines)                             # a config snippet for other clients
+
+    monkeypatch.setenv("LANG", "zh_CN.UTF-8")
+    assert Setup(clients=[]).lang == "zh-CN"                                          # Chinese systems get Chinese
+
+
+def test_setup_leaves_broken_client_config_alone(demo, tmp_path, monkeypatch):
+    from musclememory.install import Setup, cursor_config
+
+    _fake_home(tmp_path, monkeypatch)
+    cursor_config().parent.mkdir(parents=True)
+    cursor_config().write_text("{ not json", encoding="utf-8")
+    lines = Setup(lang="en", root=demo, clients=["cursor"]).install()
+    assert cursor_config().read_text(encoding="utf-8") == "{ not json"
+    assert any("not valid JSON" in line for line in lines)
+
+
+def test_packaged_skill_examples_are_valid():
+    """Every YAML example the skill shows an agent must be accepted by the real tools."""
+    import re
+
+    from musclememory.cards import load_yaml_docs
+    from musclememory.check import check_card_dict
+    from musclememory.flows import FLOW_FIELDS
+    from musclememory.grammar import parse_flow_condition, parse_flow_step
+    from musclememory.i18n import canon_doc
+    from musclememory.install import skill_files
+    from musclememory.propose import KINDS, normalize
+
+    seen = {"proposal": 0, "flow": 0}
+    for lang in ("en", "zh-CN"):
+        files = skill_files(lang)
+        assert all(p.is_file() for p in files.values())
+        assert files["SKILL.md"].read_text(encoding="utf-8").startswith("---\nname: cua-experience\n")
+        for path in files.values():
+            for block in re.findall(r"```yaml\n(.*?)```", path.read_text(encoding="utf-8"), flags=re.S):
+                doc = canon_doc(load_yaml_docs(block)[0])
+                if any(k in doc for k in KINDS):
+                    normalize(block)                               # raises ProposalError when invalid
+                    seen["proposal"] += 1
+                elif str(doc.get("id", "")).startswith("FLOW."):
+                    assert set(doc) <= FLOW_FIELDS
+                    for step in doc["steps"]:
+                        parse_flow_step(step)
+                    for cond in doc["check"]:
+                        parse_flow_condition(cond)
+                    seen["flow"] += 1
+                elif "id" in doc:
+                    assert check_card_dict(doc) == []
+    assert seen["proposal"] >= 6 and seen["flow"] >= 2

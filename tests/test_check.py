@@ -222,3 +222,19 @@ def test_readme_examples_are_valid_cards_and_flows():
                     assert scan_doc(doc) == [], (name, doc.get("id"))
                     seen["card"] += 1
     assert seen["flow"] >= 2 and seen["card"] >= 4
+
+
+def test_markdown_links_resolve_and_docs_exist_in_both_languages():
+    import re
+
+    from conftest import REPO
+
+    files = [REPO / "README.md", REPO / "README.zh-CN.md", REPO / ".github" / "SECURITY.md"]
+    files += sorted((REPO / "docs").rglob("*.md")) + sorted((REPO / "src" / "musclememory" / "skill").glob("*.md"))
+    for md in files:
+        for target in re.findall(r"\]\((\.{1,2}/[^)#\s]+)", md.read_text(encoding="utf-8")):
+            assert (md.parent / target).exists(), f"{md.relative_to(REPO)} links to missing {target}"
+    for name in ("DESIGN.md", "SECURITY.md", "STATUS.md"):
+        assert (REPO / "docs" / "en" / name).is_file() and (REPO / "docs" / "zh-CN" / name).is_file()
+    for name in ("DESIGN.md", "SECURITY.md", "SKILL.md"):
+        assert not (REPO / name).exists(), f"{name} belongs under docs/ or the packaged skill, not the root"

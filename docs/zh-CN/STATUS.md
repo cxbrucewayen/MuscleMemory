@@ -22,6 +22,7 @@ v0.1 基线实现了什么、与[设计](./DESIGN.md)和[安全设计](./SECURIT
 | 提案 | `propose.py` | `kb_propose` 是唯一写入口；维护者用 `kb merge` 合并 |
 | 事务流程 | `flows.py` | 7 个动词，csv/xlsx 表格与备份，检查点，恢复，`authorize`，锁定哈希，`kb flow tick` 定时 |
 | MCP 服务 | `mcp_server.py` | stdio，不依赖 SDK，12 个工具，`!` 步骤走 elicitation |
+| 安装器 | `install.py`、`skill/` | `kb setup` 安装技能（中文或英文），并在 Claude Code、Cursor、Claude Desktop 里注册 MCP 服务；Claude Code 用真实命令行验证过，另外两个只按其配置文件格式写入 |
 
 测试（`tests/`）在模拟器上跑通整条链路，并覆盖反面情况：伪造确认令牌、已批准流程的卡片被篡改、密钥出现在日志里、收件人不在 `authorize` 中。
 
@@ -44,7 +45,8 @@ v0.1 基线实现了什么、与[设计](./DESIGN.md)和[安全设计](./SECURIT
 9. **MCP 下的 `!`**：客户端支持 elicitation 时，服务在每个 `!` 步骤前直接问用户。不支持时，`kb_run` / `kb_flow` 返回 `!` 步骤清单和绑定本次调用的一次性令牌。这依赖智能体确实去问用户，也就是技能里的第 8 条规则。
 10. **提案上限**：“每次任务最多 3 条”按 MCP 会话计数，调用 `kb_bundle` 时清零。
 11. **`kb fmt` 会丢弃 YAML 注释**。注释不属于数据模型，智能体也从不读原始文件。
-12. **本地统计**写在 `runs/stats.json`；每周汇总成一条 `update` 提案的功能未实现。
+12. **仓库结构**：设计里的目录树把 `DESIGN.md`、`SKILL.md`、`SECURITY.md` 放在根目录。这里文档放在 `docs/<语言>/` 下，技能随 Python 包发布（`src/musclememory/skill/`），这样 `kb setup` 才能安装它；技能自带一份简短的 `REFERENCE.md`，不再让智能体去读完整规格。
+13. **本地统计**写在 `runs/stats.json`；每周汇总成一条 `update` 提案的功能未实现。
 
 ## 未实现
 

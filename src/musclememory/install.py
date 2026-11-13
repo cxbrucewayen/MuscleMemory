@@ -273,7 +273,7 @@ class Setup:
         self.write_config()
         skill = self.install_skill()
         clients = self.register()
-        if not clients:
+        if not clients and self.clients is None:
             self.say("none_found", ", ".join(CLIENTS))
         self.manual(skill)
         if not (self.driver or load_config().get("driver")) and (root / "examples" / "demo").is_dir():

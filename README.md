@@ -1,198 +1,262 @@
-# MuscleMemory · 肌肉记忆
+# MuscleMemory
 
-> **Muscle memory for AI agents.**
-> 给 AI 智能体的肌肉记忆：第一次靠 AI 摸索，之后靠经验直接完成。
+**English** | [简体中文](./README.zh-CN.md)
 
-> ⚠️ **项目状态：设计阶段。** 本仓库目前只有设计文档，代码尚未实现。下文中的命令和接口都是设计规格，欢迎讨论和参与。
+[![CI](https://github.com/cxbrucewayen/MuscleMemory/actions/workflows/ci.yml/badge.svg)](https://github.com/cxbrucewayen/MuscleMemory/actions/workflows/ci.yml)
 
----
+> **Muscle memory for AI agents.** The first time, the AI figures a GUI task out. After that, a program replays the experience, and the AI only steps back in when something changed.
 
-## 为什么需要它
-
-让 AI 操作电脑（Computer-Use Agent）已经可行，但每一次都是从零开始：截图、理解界面、猜按钮、试错。于是：
-
-- **慢、贵**：同一件事，第一百次和第一次一样费时、一样耗 token。
-- **不稳定**：今天点对了，明天换个版本就点错。
-- **不积累**：踩过的坑，下次还会再踩一遍；你踩过的坑，别人也要再踩一遍。
-
-传统的 RPA 脚本能跑得快，但靠人录制维护，界面一变就坏。
-
-**MuscleMemory 把两者结合起来：AI 负责探索和修复，经验负责复用和执行。**
-
-```
-第一次：AI 看屏幕、摸索、完成任务 ──► 提炼成经验卡片
-之后：  按当前环境查出卡片 ──► 程序直接运行（快、零 token）
-坏了：  软件改版、定位失败 ──► 交给 AI 修复 ──► 提交新的经验 ──► 又能直接运行
-```
+**Status: working baseline (v0.1).** The `kb` command line, the checker, the resolver, the executor, flows, secrets and an MCP server are implemented and tested against a built-in UI simulator. Real-device drivers exist for Android (`adb`) and desktop (`cua-driver`, experimental) but have not been run against real devices in this repository's CI. The public card library is still almost empty: verified cards arrive through proposals. See [docs/STATUS.md](./docs/STATUS.md) for exactly what is and is not done.
 
 ---
 
-## 它是什么
+## Why
 
-| | 比喻 | 解决的问题 |
+Computer-use agents can already operate a desktop or a phone, but every run starts from zero: take a screenshot, understand the UI, guess the button, try again.
+
+- **Slow and expensive.** The hundredth run costs as much time and as many tokens as the first.
+- **Unstable.** It clicked the right thing today; tomorrow's app update moves it.
+- **Nothing accumulates.** The pitfall you hit will be hit again, by you and by everyone else.
+
+Classic RPA scripts are fast, but people record and maintain them, and they break when the UI changes.
+
+**MuscleMemory combines the two: the AI explores and repairs; experience is reused and executed.**
+
+```
+First time:  the AI looks, explores, finishes the task  ──►  distilled into experience cards
+Afterwards:  look up the cards for this environment      ──►  a program runs them (fast, zero tokens)
+When broken: the app changed, a locator fails            ──►  hand over to the AI ──► it proposes a fix ──► runs directly again
+```
+
+## What it is
+
+| | Metaphor | Problem it solves |
 |---|---|---|
-| MCP | 插座 | AI 怎么调用外部工具 |
-| Skill | 说明书 | 告诉 AI 某类任务该怎么做 |
-| [Cua](https://github.com/trycua/cua) | 手 | AI 怎么看屏幕、点鼠标、敲键盘 |
-| **MuscleMemory** | **熟练** | **某个软件的某个版本里，这件事具体怎么做最稳，而且越用越熟** |
+| MCP | the socket | how an AI calls external tools |
+| Skill | the manual | how to approach a kind of task |
+| [Cua](https://github.com/trycua/cua) | the hands | how an AI sees the screen, clicks and types |
+| **MuscleMemory** | **the practice** | **how exactly to do this thing in this version of this app, getting more reliable with use** |
 
-它们不是竞争关系。MuscleMemory 通过 **MCP** 提供接口，用一个 **Skill** 教 AI 如何使用经验库，借助 **Cua** 动手操作。
+They are not competitors. MuscleMemory exposes its tools over **MCP**, ships a **Skill** that teaches an agent how to use the library, and acts through a driver such as **Cua** or **adb**.
 
----
+## Features
 
-## 核心特性
+- **Across systems, apps and versions.** The platform is a directory, the app is a file, the version is a range on the card. A reference never names a version: the resolver picks the best-matching card, and a new version only records what changed (an `@` variant).
+- **Readable by AI, runnable by programs.** Steps use a small fixed grammar. Stable experience is executed by `kb run` without calling a model.
+- **Self-healing.** Each element keeps several locators and a one-line `purpose`. When all locators fail, the executor hands over to the AI with a structured package; the AI finishes the task and proposes a variant.
+- **Fast retrieval.** The environment narrows the scope to a few files; then one of three entry points (task, error, screen) finds the card. Related cards come back as one bundle of bounded size.
+- **Navigation.** Side-effect-free recipes form a graph between screens; the executor walks to the required screen first.
+- **Flows.** Chain several apps into one errand, for example "task list → summary → send to the boss → write back". Data passing, checkpoints, resume and schedules are built in.
+- **Security first.** The grammar is the whitelist: there is no way to spell "run a command" or "open a URL". External experience is quarantined until someone reproduces it. Unattended jobs only run the exact version you approved. Passwords only ever flow into an input field.
+- **Global, with first-class Chinese support.** The repository stores an English canonical form; every field name, verb and keyword also has a Chinese alias, and aliases are matched in all languages.
 
-- **跨系统、跨软件、跨版本**：系统对应目录，软件对应文件，版本写在卡片的适用范围里。同一个目标在不同系统上各有做法，同一张卡在新版本上只需记录变化的部分。引用时不写版本，由系统自动挑出最匹配的那张卡。
-- **AI 读得懂，程序跑得动**：步骤使用固定的小语法。稳定的经验由执行器直接运行，不调用大模型。
-- **失效能自愈**：每个元素保存多种定位方式和一句"作用"描述。一种失效就换下一种，全部失效时由 AI 按描述重新寻找，并提交新的版本变体。
-- **快速检索**：先按当前环境把范围缩小到几个文件，再从任务、报错、界面三个入口之一定位。相关经验一次打包返回，体积可控。
-- **界面导航**：从配方的前置界面和结束界面自动构成导航图，执行前自动走到需要的界面。
-- **事务流程**：把多个软件串成一件事，例如"任务清单 → Excel 汇总 → 微信发给老板 → 回填清单"。支持数据传递、断点恢复和定时运行。
-- **安全优先**：语法本身就是白名单；外部经验必须经人独立复现才能入库；无人值守的任务只执行你亲自批准过的版本；密码永远只流向输入框。
-- **面向全球，适配中国**：仓库统一存英文规范形式，同时完整支持中文写法。支持国产安卓系统、鸿蒙 NEXT，提供 Gitee 镜像。
+## Try it in two minutes
 
----
+No device needed: the demo library runs against a simulated chat app.
 
-## 一个例子
+```bash
+git clone https://github.com/cxbrucewayen/MuscleMemory && cd MuscleMemory
+pip install -e .
 
-经验以卡片的形式保存，格式是标准 YAML：
+export KB_ROOT=examples/demo
+export KB_DRIVER=sim:examples/demo/sim/windows-4.1.yaml     # a simulated "DemoChat 4.1" on Windows
+
+kb check                                   # validate the library (format, grammar, security scan)
+kb find "rename remark"                    # the experience bundle for a task; try: kb find 改备注
+kb run RCP.COMMON.DEMOCHAT.RENAME_REMARK contact=Alice remark=Boss
+```
+
+`kb run` stops before the one step marked `!` and asks you:
+
+```
+! This step has an external effect:
+  RCP.WIN.DEMOCHAT.RENAME_REMARK: key! Enter
+  Allow it? [y/N] y
+{ "status": "ok", "recipe": "RCP.WIN.DEMOCHAT.RENAME_REMARK", "message": "check passed", ... }
+```
+
+Now pretend the app was updated. In 4.2 the remark is an edit box instead of a button:
+
+```bash
+export KB_DRIVER=sim:examples/demo/sim/windows-4.2.yaml
+kb find "rename remark"
+```
+
+```
+env: WIN 10.0.22631 / DEMOCHAT 4.2.0 / sim 0.1.0 / en-US / DPI 100%
+directly runnable: no (ELEM.WIN.DEMOCHAT.REMARK_ROW@4.2 is observed, needs at least reproduced)
+├─ RCP.WIN.DEMOCHAT.RENAME_REMARK               match stable
+├─ ELEM.WIN.DEMOCHAT.REMARK_ROW@4.2             match observed (variant 4.2 selected)
+...
+```
+
+The same reference resolved to a different element card, and because that variant has only been seen once, the program refuses to run it unattended and leaves it to the AI (`kb run --force ...` performs the trial run).
+
+More to try:
+
+```bash
+kb symptom "clicks on the profile card have no effect"    # look up a pitfall
+kb --lang zh-CN show RCP.WIN.DEMOCHAT.RENAME_REMARK       # the same card, shown in Chinese
+kb outline                                                # one line per card in scope
+
+# A flow that reads a CSV, sends a file in the chat app and writes the CSV back.
+# It edits work/tasks.csv, so run it on a copy:
+cp -r examples/demo /tmp/mm-demo
+kb --root /tmp/mm-demo --driver sim:/tmp/mm-demo/sim/windows-4.1.yaml flow run FLOW.WEEKLY_REPORT
+```
+
+## One card
+
+Experience is stored as cards in plain YAML:
 
 ```yaml
-id: RCP.WIN.WECHAT.RENAME_REMARK          # 类型.平台.软件.名称
+id: RCP.WIN.DEMOCHAT.RENAME_REMARK        # TYPE.PLATFORM.APP.NAME
 applies:
   os: WIN >=10.0
-  app: WECHAT >=4.0
-  driver: cua-driver >=0.47
+  app: DEMOCHAT >=4.0
 steps:
-  - call RCP.WIN.WECHAT.OPEN_PROFILE contact={contact}
-  - click ELEM.WIN.WECHAT.REMARK_ROW
-  - wait ELEM.WIN.WECHAT.REMARK_EDIT shown 5s
+  - call RCP.WIN.DEMOCHAT.OPEN_PROFILE contact={contact}
+  - click ELEM.WIN.DEMOCHAT.REMARK_ROW
+  - wait ELEM.WIN.DEMOCHAT.REMARK_EDIT shown 5s
   - key Ctrl+A
   - call RCP.COMMON.INPUT_TEXT text={remark}
-  - key! Enter                            # ! 表示会产生外部影响，执行前需要授权
+  - key! Enter                            # ! = external effect; needs authorization
 check:
-  - ELEM.WIN.WECHAT.PROFILE_REMARK text == {remark}
+  - ELEM.WIN.DEMOCHAT.PROFILE_REMARK value == {remark}
+ends_at: ELEM.WIN.DEMOCHAT.PROFILE_CARD
 state: stable
 ```
 
-同一句"改微信备注"，在不同环境下自动得到不同的做法：
+The same sentence, "rename the remark", resolves differently per environment:
 
-| 当前环境 | 使用的经验 |
+| Environment | What is used |
 |---|---|
-| Windows 11 + 微信 4.1 | Windows 配方 + 备注行的基础定位 |
-| Windows 11 + 微信 4.2 | Windows 配方 + 备注行的 4.2 变体 |
-| Android 14 + 微信 8.0 | Android 配方 |
-| macOS + 微信 | 还没有经验 → AI 探索，完成后贡献一张新卡 |
+| Windows + DemoChat 4.1 | the Windows recipe + the base locator of the remark row |
+| Windows + DemoChat 4.2 | the Windows recipe + the `@4.2` variant of the remark row |
+| Android + DemoChat 5.0 | no recipe yet → the AI explores, then contributes `RCP.ANDROID.DEMOCHAT.RENAME_REMARK` |
 
----
+Chinese spelling is equivalent everywhere (`点击! ELEM...`, `步骤:`, `状态: 稳定`); `kb fmt` converts to the canonical form.
 
-## 和其他方案有什么不同
-
-| | Skill | 传统 RPA | AI 记忆（如 mem0） | **MuscleMemory** |
-|---|---|---|---|---|
-| 记录什么 | 通用做法 | 录制的脚本 | 关于用户和对话的事实 | 具体软件、具体版本的操作经验 |
-| 由谁维护 | 人手写 | 人录制 | 自动 | AI 积累，人审核 |
-| 版本适配 | 无 | 无，一改版就坏 | 不适用 | 按版本范围自动匹配，失效能自愈 |
-| 可信度 | 写的人说了算 | 录制时可用 | 无验证 | 有证据、有状态，独立复现后才升级 |
-| 能否脱离大模型执行 | 不能 | 能 | 不能 | 稳定后能 |
-| 能否共享 | 能 | 难 | 不适合 | 能，开源经验库 |
-
-**"给每个软件写一个 Skill 不就行了？"** 规模小时可以。但软件一直在更新：同一个按钮在 4.1 和 4.2 里定位方式不同，中文界面和英文界面也不同。手写的 Skill 无法判断哪条经验适用于当前版本、还对不对，也不能脱离大模型直接执行。MuscleMemory 解决的正是这三件事。
-
----
-
-## 快速开始（规划中）
+## Use it with a real device
 
 ```bash
-# 查经验
-kb find 微信 备注
-kb symptom "stream did not contain valid UTF-8"
-
-# 解析出当前环境要用的卡
-kb resolve RCP.COMMON.WECHAT.RENAME_REMARK --env env.yaml
-
-# 直接运行稳定的经验
-kb run RCP.COMMON.WECHAT.RENAME_REMARK contact=<CONTACT_A> remark=<NEW_NAME>
-
-# 存密码（Windows 上默认写入 %USERPROFILE%\.cua-experience\.env）
-kb secret set OA_PASSWORD
-
-# 运行事务流程
-kb flow run FLOW.WEEKLY_REPORT
-
-# 提交前检查
-kb fmt && kb check
+kb --driver adb env            # Android over adb + uiautomator (add :<serial> for a specific device)
+kb --driver cua env            # desktop apps through cua-driver (experimental adapter)
 ```
 
-AI 智能体通过 MCP 使用同样的能力：`kb_bundle`、`kb_symptom`、`kb_screen`、`kb_run`、`kb_propose` 等。
+| Driver | Platforms | State |
+|---|---|---|
+| `sim:<file.yaml>` | simulated | used by the tests and the demo |
+| `adb[:serial]` | Android | implemented with stock platform tools; not yet exercised on a device in CI |
+| `cua` | Windows, macOS, Linux | experimental; written against cua-driver's published tool contract, not yet run against a live driver |
+| HarmonyOS (`hdc`), iOS | | not implemented |
 
----
+Set a default in `~/.cua-experience/config.yaml` (`driver: adb`, `lang: zh-CN`, `secret_backend: env`).
 
-## 仓库结构
+## Use it from an AI agent
 
+Register the MCP server with your agent, for example:
+
+```json
+{
+  "mcpServers": {
+    "musclememory": {
+      "command": "kb",
+      "args": ["--root", "/path/to/MuscleMemory", "--driver", "adb", "mcp"]
+    }
+  }
+}
 ```
-├── README.md          # 本文件：项目介绍
-├── DESIGN.md          # 设计规格：卡片格式、步骤语法、解析、检索、导航、执行、密钥、流程
-├── SKILL.md           # 给 AI 的技能：何时查、怎么用、怎么提交经验
-├── SECURITY.md        # 安全设计：投毒、注入、泄露的防御
-├── cards/             # 经验卡片（按 平台/软件 组织）
-├── proposals/         # 待审核的提案（隔离区）
-├── flows/             # 本地事务流程（不公开）
-└── runs/              # 本地运行记录（不公开）
-```
 
-**从哪里读起**
+and give the agent [`SKILL.md`](./SKILL.md) ([English](./docs/en/SKILL.md)). The tools are `kb_bundle`, `kb_symptom`, `kb_screen`, `kb_outline`, `kb_resolve`, `kb_goto`, `kb_run`, `kb_lock`, `kb_unlock`, `kb_type_secret`, `kb_propose` and `kb_flow`.
 
-| 你是 | 先读 |
+Steps marked `!` are confirmed by the user through MCP elicitation when the client supports it. Otherwise `kb_run` performs nothing, returns the list of `!` steps with a one-time token, and the agent has to ask the user before calling again.
+
+## Commands
+
+| Command | What it does |
 |---|---|
-| 想了解项目 | 本文件 |
-| 想参与开发 | `DESIGN.md`，然后是 `SECURITY.md` |
-| 想贡献经验 | 下方"贡献经验"，然后是 `SKILL.md` 第 6 节 |
-| AI 智能体 | `SKILL.md` |
+| `kb find <task>` / `symptom <error>` / `screen <features>` / `outline` | retrieval by task, error, screen, or everything in scope |
+| `kb resolve <id>` / `show <id> --lang zh-CN` | the card that applies here / print a card |
+| `kb run <id> name=value ...` / `goto <screen>` | execute a recipe / navigate |
+| `kb check` / `fmt` / `index` / `migrate` | validate, canonicalise, rebuild the index, upgrade formats |
+| `kb propose [file]` / `merge <proposal>` | submit experience / maintainers apply a reviewed proposal |
+| `kb secret set\|list\|rm\|check` | secrets, stored outside the repository |
+| `kb flow run\|resume\|approve\|list\|tick` | flows; `tick` runs due schedules (call it from cron or Task Scheduler) |
+| `kb env` / `kb mcp` | print the environment snapshot / serve MCP over stdio |
 
----
+`--root`, `--driver`, `--env` and `--lang` work on every command; `KB_ROOT`, `KB_DRIVER` and `KB_LANG` set defaults.
 
-## 安全
+## How it differs
 
-开源的经验库是一条**会被 AI 和程序照着执行的供应链**，所以安全是设计的前提，不是附加功能：
+| | Skill | Classic RPA | AI memory (e.g. mem0) | **MuscleMemory** |
+|---|---|---|---|---|
+| Records | general know-how | recorded scripts | facts about users and chats | how to operate a specific app at a specific version |
+| Maintained by | people | people | automatic | AI accumulates, people review |
+| Version awareness | none | none; breaks on updates | n/a | matched by version range, heals on failure |
+| Trust | the author's word | worked when recorded | unverified | evidence and state; promoted only after independent reproduction |
+| Runs without a model | no | yes | no | yes, once stable |
+| Shareable | yes | hard | not suitable | yes, an open library |
 
-- **卡片是数据，不是指令。** 卡片里没有命令、没有链接、没有可执行代码，步骤只能使用白名单中的动词。
-- **外部经验先进隔离区。** 需要经过机器检查、人工阅读、在对应版本上**独立复现**、签名合并，才会被智能体读到。
-- **无人值守只做你批准过的那一版。** 任何一张相关卡片被修改，定时任务都会自动暂停，等你重新确认。
-- **个人信息不出本机。** 流程、运行记录、截图、密钥都只留在你的电脑上；公开库里不允许出现个人信息。
-- **密码永远只流向输入框。** AI 拿不到明文，日志和截图里一律显示为 `***`。
+**"Why not write one Skill per app?"** That works at small scale. But apps keep changing: the same button is located differently in 4.1 and 4.2, and differently again in the Chinese and English UI. A hand-written Skill cannot tell which piece of experience applies to the current version or whether it is still right, and it cannot run without a model. Those three things are what MuscleMemory is for.
 
-完整设计见 [`SECURITY.md`](./SECURITY.md)。发现安全问题，请通过私下渠道报告，不要公开提交 issue。
+## Repository layout
 
----
+```
+├── README.md  README.zh-CN.md
+├── DESIGN.md          # the specification (Chinese): cards, grammar, resolution, retrieval, execution, flows
+├── SECURITY.md        # the security design (Chinese): poisoning, injection, leaks, unattended hijacking
+├── SKILL.md           # the skill for AI agents (Chinese)
+├── docs/en/           # English translations of the three documents above
+├── docs/STATUS.md     # what this baseline implements, where it deviates, what is missing
+├── src/musclememory/  # the implementation (Python, one dependency: PyYAML)
+├── cards/             # the public card library (platform/app.yaml)
+├── index/             # generated retrieval index
+├── examples/demo/     # a complete demo library, simulated apps and flows
+├── tests/
+├── proposals/         # pending proposals (quarantine); created on demand
+├── flows/  runs/      # local only, git-ignored: your flows, run records, locks
+```
 
-## 贡献经验
+Where to start: this file if you are curious, `DESIGN.md` then `SECURITY.md` if you want to work on the engine, the "Contributing experience" section below if you want to add cards, `SKILL.md` if you are an AI agent.
 
-1. 让你的 AI 在完成任务后用 `kb_propose` 提交，或者照 `DESIGN.md` 的格式手写。中文、英文都可以。
-2. 运行 `kb fmt && kb check`，全部通过后再提交 PR。
-3. 证据里只写结构（控件、报错码、现象），**不写人名、聊天内容、本机路径、密码**，用 `<CONTACT_A>`、`<USER_HOME>` 这类占位符代替。
-4. 维护者会在对应版本环境里独立复现。复现通过后合并，初始状态为"观察"，之后随着更多人复现逐步升级。
+## Security
 
-最有价值的贡献依次是：**坑（FAIL）**、**版本变体**、**新系统上的做法**。
+An open experience library is a **supply chain that AIs and programs execute**, so security is a premise of the design rather than a feature added later:
 
----
+- **Cards are data, not instructions.** No commands, no links, no code; steps can only use whitelisted verbs, and `type` only accepts parameters, never literal text.
+- **External experience is quarantined.** Machine check, human reading, **independent reproduction** in the declared environment, then a signed merge, before any agent reads it.
+- **Unattended jobs only run the version you approved.** A change to the flow or to any card it can reach pauses the job until you approve again.
+- **Personal data stays on your machine.** Flows, run records, screenshots and secrets are local; personal data is rejected from the public library.
+- **Passwords only flow into input fields.** The AI never sees them; logs and hand-off packages show `***`.
 
-## 路线图
+Full design: [`SECURITY.md`](./SECURITY.md) ([English](./docs/en/SECURITY.md)). Please report vulnerabilities privately through GitHub's "Report a vulnerability" on this repository instead of opening a public issue.
 
-- [ ] YAML 解析器、`kb fmt`、`kb check`（格式、语法、安全扫描）
-- [ ] 版本解析与检索（`kb resolve`、`kb_bundle`），MCP 服务
-- [ ] 执行器 `kb run`、交接给 AI、界面导航
-- [ ] 第一个软件的完整经验：Windows + cua-driver
-- [ ] 第二个版本、第二种界面语言、第二个系统
-- [ ] 事务流程、密钥管理、定时运行
-- [ ] 开放外部贡献：行为摘要、独立复现流程、签名发布、Gitee 镜像
+## Contributing experience
 
----
+1. Let your agent call `kb_propose` when a task is done, or write a proposal by hand following `DESIGN.md`. Chinese or English are both fine.
+2. Run `kb fmt && kb check`; open a pull request once both pass.
+3. Evidence describes structure only (controls, error codes, symptoms). **No names, chat content, local paths or passwords**; use placeholders such as `<CONTACT_A>` and `<USER_HOME>`.
+4. A maintainer reproduces the card in the declared version and UI language. It is merged as `observed` and promoted as more people reproduce it.
 
-## 致谢
+The most valuable contributions, in order: **pitfalls (FAIL)**, **version variants**, **recipes on a new platform**.
 
-本项目基于 [Cua](https://github.com/trycua/cua) 的计算机使用能力构建，是独立的社区项目，与 Cua 官方无隶属关系。
+## Roadmap
 
-## 许可证
+- [x] YAML parser, `kb fmt`, `kb check` (format, grammar, security scan)
+- [x] Version resolution and retrieval (`kb resolve`, `kb_bundle`), MCP server
+- [x] Executor `kb run`, hand-off to the AI, navigation
+- [x] Flows, secrets, schedules (`kb flow tick`)
+- [x] Second version and second platform, demonstrated on the simulator (UI-language matching is covered by tests)
+- [ ] First real app end to end on Windows + cua-driver; verify the adapters on real devices
+- [ ] A seed library of verified cards
+- [ ] External contributions: behaviour summaries for reviewers, reproduction workflow, signed releases, Gitee mirror
+- [ ] HarmonyOS (`hdc`) and iOS drivers; localised CLI messages; semantic retrieval when the library grows
 
-MIT（待定）
+## Acknowledgements
+
+MuscleMemory builds on the computer-use capabilities of [Cua](https://github.com/trycua/cua). It is an independent community project and is not affiliated with Cua.
+
+## License
+
+MIT is planned; no license file has been added yet.

@@ -5,9 +5,7 @@ description: Use when operating software on Windows, Linux, macOS, Android, iOS 
 
 # CUA experience skill
 
-> English translation of [`SKILL.md`](../../SKILL.md). The Chinese file is the source; if the two differ, the Chinese one wins.
-
-Card format, step grammar, resolution, retrieval, navigation and secret rules are in `DESIGN.md`; security details are in `SECURITY.md`. Field names and verbs may be written in English or Chinese (see DESIGN appendix A).
+The card format, step grammar, conditions, locators and flow grammar are summarised in `REFERENCE.md` next to this file. The full specification and the security design are in the project's `docs/` folder. Field names and verbs may be written in English or Chinese.
 
 ## When to use it
 
@@ -56,10 +54,13 @@ Write `unknown` for anything you cannot read; every card is then only a clue. **
 
 ```
 bundle says "directly runnable" → kb_run(id, params, env), wait for its result
-                                    ok       → tell the user the result
-                                    hand-off → go to step 4
+                                    ok               → tell the user the result
+                                    confirm_required → see below
+                                    hand-off         → go to step 4
 it says "no", or there is no recipe → you execute (rules below)
 ```
+
+**When `kb_run` or `kb_flow` answers `confirm_required`**, nothing has been executed. Show the user the listed `!` steps exactly as returned. Only if the user agrees, call again with the same arguments plus the returned `confirm_token`. Never pass a token the user has not agreed to.
 
 **Rules when you execute yourself**
 1. **`kb_lock(app)` first.** If you cannot get the lock, tell the user who holds it. `kb_unlock` when done
@@ -118,7 +119,7 @@ evidence: original locator 1 found no Button; Edit worked on first try
 
 **Rules for writing proposals**
 - **Always attach the environment snapshot**, including the UI language; without it the version range cannot be judged
-- Write steps, criteria and locators **in the grammar of DESIGN sections 6 and 10**, so a program can run them later
+- Write steps, criteria and locators **in the grammar of `REFERENCE.md`**, so a program can run them later
 - A new card's `applies` lists only the versions you verified, for example `=4.2.0`
 - Locators that depend on UI text require `applies.lang`; prefer `id` when there is one
 - Give `aliases` in both Chinese and English where you can
@@ -131,7 +132,7 @@ evidence: original locator 1 found no Button; Edit worked on first try
 
 ## 7. Flows (one errand across several apps, or a scheduled job)
 
-Format and grammar: `DESIGN.md` section 19.
+Format and grammar: the "Flows" section of `REFERENCE.md`.
 
 **Drafting** (when the user describes an errand)
 1. Split it into sub-goals and find a recipe for each with `kb_bundle`

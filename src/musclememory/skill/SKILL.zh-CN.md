@@ -5,7 +5,7 @@ description: 用 CUA（cua-driver / cua sandbox / adb / hdc）操作 Windows、L
 
 # CUA 经验技能
 
-卡片格式、步骤语法、解析、检索、导航、密钥规则见 `DESIGN.md`，安全细则见 `SECURITY.md`。字段和动词用英文或中文都可以（对照见 DESIGN 附录 A）。
+卡片格式、步骤语法、条件、定位和流程语法的速查见同目录的 `REFERENCE.md`。完整规格和安全设计在项目的 `docs/` 目录里。字段和动词用英文或中文都可以（对照表在 `REFERENCE.md` 末尾）。
 
 ## 何时用
 
@@ -54,10 +54,13 @@ rom: HyperOS 1.0        # 只在 Android 类平台写
 
 ```
 经验包标"可直接运行" → kb_run(id, params, env)，等它的结果
-                         成功 → 告诉用户结果
-                         交接 → 进入第 4 步
+                         成功             → 告诉用户结果
+                         confirm_required → 见下
+                         交接             → 进入第 4 步
 标"否"或没有配方      → 由你执行（下面的规则）
 ```
+
+**`kb_run` 或 `kb_flow` 返回 `confirm_required` 时**，什么都还没有执行。把返回的 `!` 步骤原样给用户看。只有用户同意了，才带上返回的 `confirm_token`、用同样的参数再调用一次。用户没同意的令牌，绝不能传。
 
 **你自己执行时的规则**
 1. **先 `kb_lock(app)`**，拿不到锁就告诉用户谁正在占用；做完 `kb_unlock`
@@ -116,7 +119,7 @@ evidence: original locator 1 found no Button; Edit worked on first try
 
 **写提案的规则**
 - **必须附环境快照**，包括界面语言，否则无法判断版本范围
-- 步骤、判据、定位都**按 DESIGN 第 6、10 节的语法写**，这样程序以后才能直接运行
+- 步骤、判据、定位都**按 `REFERENCE.md` 的语法写**，这样程序以后才能直接运行
 - 新卡的 `applies` 只写验证过的版本，例如 `=4.2.0`
 - 依赖界面文字的定位必须写 `applies.lang`；能用 `id` 的优先用 `id`
 - `aliases` 尽量中英都写
@@ -129,7 +132,7 @@ evidence: original locator 1 found no Button; Edit worked on first try
 
 ## 7. 事务流程（跨多个软件的一件事，或定时任务）
 
-格式和语法见 `DESIGN.md` 第 19 节。
+格式和语法见 `REFERENCE.md` 的“事务流程”一节。
 
 **起草**（用户描述一件事时）
 1. 把这件事拆成子目标，每个子目标用 `kb_bundle` 找配方

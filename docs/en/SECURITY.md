@@ -1,6 +1,8 @@
 # CUA experience library · Security design (v6)
 
-> English translation of [`SECURITY.md`](../../SECURITY.md). The Chinese file is the source; if the two differ, the Chinese one wins. For what the current code enforces, see [`docs/STATUS.md`](../STATUS.md).
+**English** | [简体中文](../zh-CN/SECURITY.md)
+
+> This is the security **design**. To report a vulnerability, see the repository security policy (`.github/SECURITY.md`). For what the current code enforces, see [Implementation status](./STATUS.md).
 
 > Once it is open source, the experience library is a **supply chain that AIs and programs execute**.
 > Design premise: an attacker can submit arbitrary content and wants your computer to do harm on their behalf, even while you are away.

@@ -271,7 +271,8 @@ class KB:
 
 
 def find_root(start: Path | str | None = None) -> Path:
-    """Locate the library root: $KB_ROOT, or the nearest parent containing cards/."""
+    """Locate the library root: $KB_ROOT, the nearest parent containing cards/,
+    the `root` recorded by `kb setup`, or ~/.cua-experience/library."""
     env = os.environ.get("KB_ROOT")
     if env:
         return Path(env)
@@ -279,6 +280,10 @@ def find_root(start: Path | str | None = None) -> Path:
     for cand in (p, *p.parents):
         if (cand / "cards").is_dir():
             return cand
+    configured = load_config().get("root")
+    for cand in (configured, user_home() / "library"):
+        if cand and (Path(cand) / "cards").is_dir():
+            return Path(cand)
     return p
 
 

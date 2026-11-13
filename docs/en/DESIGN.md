@@ -1,6 +1,8 @@
 # CUA experience system · Design (v6)
 
-> English translation of [`DESIGN.md`](../../DESIGN.md). The Chinese file is the source; if the two differ, the Chinese one wins. For what the current code implements and where it deviates, see [`docs/STATUS.md`](../STATUS.md).
+**English** | [简体中文](../zh-CN/DESIGN.md)
+
+> The English and Chinese versions are maintained together. For what the current code implements and where it deviates, see [Implementation status](./STATUS.md).
 
 > Write what each computer-use session taught you as short cards. One set of cards has to work across systems, apps and versions; an AI has to find it quickly and a program has to be able to run it; it serves a global audience and fully supports China.
 >

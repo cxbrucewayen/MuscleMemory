@@ -360,6 +360,16 @@ def cmd_flow(c: Ctx, a):
         sys.exit(f"error: {e}")
 
 
+def cmd_setup(c: Ctx, a):
+    from .install import Setup
+    clients = None if not a.client or "auto" in a.client else [x for x in a.client if x != "none"]
+    setup = Setup(lang=a.lang, root=a.root or os.environ.get("KB_ROOT"), driver=a.driver, clients=clients,
+                  skills_dir=a.skills_dir, clone=not a.no_clone, dry_run=a.dry_run)
+    for line in (setup.uninstall() if a.uninstall else setup.install()):
+        print(line)
+    return 0
+
+
 def cmd_mcp(c: Ctx, a):
     from .mcp_server import Server
     driver = c.driver if c.has_driver() else None
@@ -419,6 +429,13 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--step-done", action="store_true", help="resume: the paused step was completed by hand/AI")
     sp.add_argument("--redo", action="store_true", help="resume: redo a step whose ! outcome was verified as not done")
     add("mcp", cmd_mcp, "serve the MCP tools over stdio")
+    sp = add("setup", cmd_setup, "install the agent skill and register the MCP server")
+    sp.add_argument("--client", action="append", choices=["auto", "claude-code", "cursor", "claude-desktop", "none"],
+                    help="which agent client to register with (default: every one that is detected)")
+    sp.add_argument("--skills-dir", help="where to put the skill (default: ~/.claude/skills)")
+    sp.add_argument("--no-clone", action="store_true", help="do not clone the public library when none exists")
+    sp.add_argument("--dry-run", action="store_true", help="show what would be done")
+    sp.add_argument("--uninstall", action="store_true", help="remove the skill and the MCP registration")
     return p
 
 
@@ -430,7 +447,8 @@ def main(argv=None) -> int:
             pass
     args = build_parser().parse_args(argv)
     try:
-        return int(args.fn(Ctx(args), args) or 0)
+        ctx = None if args.fn is cmd_setup else Ctx(args)       # setup must work before any library exists
+        return int(args.fn(ctx, args) or 0)
     except DriverError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

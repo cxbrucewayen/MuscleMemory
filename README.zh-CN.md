@@ -315,4 +315,4 @@ kb --driver cua env            # 桌面软件：通过 cua-driver（实验性适
 
 ## 许可证
 
-计划采用 MIT；许可证文件尚未添加。
+[MIT](./LICENSE)

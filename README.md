@@ -320,4 +320,4 @@ Workday, Expensify, Concur and SAP are trademarks of their respective owners, na
 
 ## License
 
-MIT is planned; no license file has been added yet.
+[MIT](./LICENSE)
